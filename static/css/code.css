@@ -115,3 +115,71 @@
     color: var(--text-secondary);
     font-size: 14px;
 }
+
+/* ========== AI Line Button ========== */
+.line {
+    padding-right: 32px;
+}
+
+.line-ai-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.3;
+    transition: opacity 0.15s, border-color 0.15s;
+    padding: 0;
+    line-height: 1;
+    font-family: var(--font-ui);
+}
+
+.line:hover .line-ai-btn {
+    opacity: 0.7;
+}
+
+.line-ai-btn:hover,
+.line-ai-btn:active {
+    opacity: 1;
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(97, 175, 239, 0.1);
+}
+
+/* ========== AI Line Explanation ========== */
+.line-ai-explanation {
+    display: block;
+    padding: 8px 12px 8px 52px;
+    border-left: 3px solid var(--accent);
+    background: rgba(97, 175, 239, 0.05);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    word-wrap: break-word;
+    white-space: normal;
+}
+
+.ai-line-loading {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.ai-line-text {
+    color: var(--text-primary);
+}
+
+.ai-line-error {
+    color: var(--accent-danger);
+}

@@ -140,6 +140,8 @@ const Browse = {
 
         Notes.collapse();
         Notes.render(detail.notes, detail.id, this.projectId);
+        AI.collapse();
+        AI.renderExplanation(detail.id);
 
         // 标记已读
         if (!func.is_read) {
@@ -210,7 +212,7 @@ const Browse = {
             }
 
             const suffix = '</span>'.repeat(openTags.length);
-            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}</span>`;
+            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}<button class="line-ai-btn" data-line="${lineNum}" title="AI解释">?</button></span>`;
         });
 
         const html = wrappedLines.join('\n');
@@ -305,6 +307,7 @@ const Browse = {
         if (!this.htmlCache.has(func.id)) {
             this._preRenderHtml(detail);
         }
+        AI.preloadExplanation(func.id).catch(() => {});
     },
 
     /** 预渲染HTML（不操作DOM） */
@@ -328,7 +331,7 @@ const Browse = {
                 }
             }
             const suffix = '</span>'.repeat(openTags.length);
-            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}</span>`;
+            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}<button class="line-ai-btn" data-line="${lineNum}" title="AI解释">?</button></span>`;
         });
         this.htmlCache.set(detail.id, wrappedLines.join('\n'));
     },
@@ -451,6 +454,37 @@ const Browse = {
         });
         document.getElementById('btn-goto-export').addEventListener('click', () => {
             location.hash = `#/project/${this.projectId}/export`;
+        });
+
+        // AI行级解释 - 事件委托
+        document.getElementById('code-block').addEventListener('click', (e) => {
+            const btn = e.target.closest('.line-ai-btn');
+            if (!btn) return;
+            e.stopPropagation();
+            const lineNum = parseInt(btn.dataset.line);
+            const lineEl = btn.closest('.line');
+            if (!lineEl || !Browse.currentDetail) return;
+            // 获取该行纯文本内容
+            const lineContent = lineEl.textContent.replace(/\?$/, '').trim();
+            AI.explainLine(Browse.currentDetail.id, lineNum, lineContent, lineEl);
+        });
+
+        // AI解读面板切换
+        document.getElementById('ai-toggle').addEventListener('click', (e) => {
+            if (e.target.closest('.ai-refresh-btn')) return; // 让刷新按钮独立处理
+            AI.toggle();
+        });
+
+        // AI解读刷新按钮
+        document.getElementById('ai-refresh-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            AI.refreshExplanation();
+        });
+
+        // AI备注按钮
+        document.getElementById('btn-ai-notes').addEventListener('click', () => {
+            if (!Browse.currentDetail) return;
+            AI.generateNotes(Browse.currentDetail.id, Browse.projectId);
         });
 
         // 键盘快捷键（左右箭头）

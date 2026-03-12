@@ -196,4 +196,34 @@ const API = {
             body: JSON.stringify(body),
         });
     },
+
+    // ========== AI ==========
+
+    /** 获取函数AI解读 */
+    async getAIExplanation(functionId) {
+        return this.request(`/ai/explanation?function_id=${functionId}`);
+    },
+
+    /** 行级代码解释 */
+    async getAILineExplain(functionId, lineNumber, lineContent) {
+        return this.request('/ai/line-explain', {
+            method: 'POST',
+            body: JSON.stringify({
+                function_id: functionId,
+                line_number: lineNumber,
+                line_content: lineContent,
+            }),
+        });
+    },
+
+    /** 生成AI自动备注 */
+    async generateAINotes(functionId, projectId) {
+        return this.request('/ai/auto-notes', {
+            method: 'POST',
+            body: JSON.stringify({
+                function_id: functionId,
+                project_id: projectId,
+            }),
+        });
+    },
 };

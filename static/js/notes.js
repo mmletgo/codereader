@@ -65,7 +65,7 @@ const Notes = {
         }
         container.innerHTML = this.notes.map(note => `
             <div class="note-item" data-note-id="${note.id}">
-                <span class="note-type-badge ${note.note_type}">${this._typeLabel(note.note_type)}</span>
+                <span class="note-type-badge ${note.note_type}">${this._typeLabel(note.note_type)}</span>${note.source === 'ai' ? '<span class="note-ai-badge">AI</span>' : ''}
                 <div style="flex:1;">
                     <div class="note-content">${this._escapeHtml(note.content)}</div>
                     <div class="note-time">${this._formatTime(note.created_at)}</div>

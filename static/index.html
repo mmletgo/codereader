@@ -66,6 +66,18 @@
         <div class="browse-code" id="browse-code">
             <pre><code id="code-block" class="language-python"></code></pre>
         </div>
+        <div class="ai-panel" id="ai-panel">
+            <button class="ai-toggle" id="ai-toggle">
+                <span class="ai-toggle-arrow">&#9660;</span>
+                <span id="ai-toggle-text">AI解读</span>
+                <button class="ai-refresh-btn" id="ai-refresh-btn" title="重新生成">&#8635;</button>
+            </button>
+            <div class="ai-panel-body" id="ai-panel-body" style="display:none;">
+                <div class="ai-explanation-body" id="ai-explanation-body">
+                    <div class="ai-loading">点击展开获取AI解读</div>
+                </div>
+            </div>
+        </div>
         <div class="browse-nav" id="browse-nav">
             <button class="nav-btn" id="btn-prev" title="上一个函数">&laquo;</button>
             <span class="nav-counter" id="nav-counter">0/0</span>
@@ -91,6 +103,7 @@
                     </select>
                     <input type="text" id="note-input" class="input note-input" placeholder="输入备注...">
                     <button id="btn-add-note" class="btn btn-primary btn-sm">保存</button>
+                    <button id="btn-ai-notes" class="btn btn-ai-notes btn-sm">AI备注</button>
                 </div>
                 <div id="notes-list" class="notes-list"></div>
             </div>
@@ -151,6 +164,7 @@
     <!-- JS: 应用模块 -->
     <script src="js/api.js"></script>
     <script src="js/notes.js"></script>
+    <script src="js/ai.js"></script>
     <script src="js/browse.js"></script>
     <script src="js/graph.js"></script>
     <script src="js/list.js"></script>

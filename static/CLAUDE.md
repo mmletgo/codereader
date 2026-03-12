@@ -9,7 +9,8 @@
 - `js/api.js` — API请求封装（统一fetch wrapper，自动分页加载getAllFunctions，markRead标记已读）
 - `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键）
 - `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
-- `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存）
+- `js/ai.js` — AI辅助分析模块（函数解读面板展开/折叠、行级代码解释、AI自动备注生成、简单Markdown渲染、前端缓存+防重复请求）
+- `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存、AI备注显示AI标识）
 - `js/list.js` — 函数列表页（按文件分组、搜索debounce 300ms、点击跳转浏览器）
 - `js/export.js` — 导出页面（JSON/Markdown格式切换、预览缓存、Blob下载）
 - `lib/` — 第三方库本地文件（highlight.min.js, highlight-python.min.js, d3.min.js, github-dark.min.css）
@@ -17,7 +18,7 @@
 ## 前端架构
 纯HTML/CSS/JS单页应用，hash路由，无构建步骤。
 - 5个视图section通过display:flex/none切换，App.route()根据location.hash分发
-- 全局对象：API、Browse、Notes、Graph、List、Export、App
+- 全局对象：API、Browse、Notes、AI、Graph、List、Export、App
 - 模块间通信：Notes直接访问Browse.currentDetail和Browse.cache更新备注数据
 
 ## 5个视图路由
@@ -53,5 +54,8 @@
 - DELETE /api/v1/notes/{id} — 删除备注
 - GET /api/v1/export/?project_id=X&format=json|markdown — 导出
 - PUT /api/v1/functions/{id}/read — 标记函数已读
+- GET /api/v1/ai/explanation?function_id=X — 获取函数AI解读（带缓存）
+- POST /api/v1/ai/line-explain — 行级代码解释(body: {function_id, line_number, line_content})
+- POST /api/v1/ai/auto-notes — 生成AI自动备注(body: {function_id, project_id})
 - GET /api/v1/progress/?project_id=X — 获取阅读进度（返回last_function_id）
 - PUT /api/v1/progress/?project_id=X — 保存阅读进度（body: {last_function_id?}）

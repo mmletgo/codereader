@@ -764,3 +764,166 @@ html, body {
     background: var(--border);
     border-radius: 2px;
 }
+
+/* ========== AI Panel ========== */
+.ai-panel {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    z-index: 10;
+}
+
+.ai-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 40px;
+    padding: 0 16px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    position: relative;
+}
+
+.ai-toggle-arrow {
+    font-size: 10px;
+    transition: transform 0.2s;
+    color: var(--text-secondary);
+}
+
+.ai-toggle-arrow.open {
+    transform: rotate(180deg);
+}
+
+.ai-refresh-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.ai-refresh-btn:active {
+    color: var(--accent);
+    background: rgba(97, 175, 239, 0.1);
+}
+
+.ai-refresh-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.ai-panel-body {
+    padding: 8px 16px 12px;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.ai-explanation-body {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+/* AI解读Markdown渲染 */
+.ai-heading {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 12px 0 6px 0;
+}
+
+.ai-heading:first-child {
+    margin-top: 0;
+}
+
+.ai-paragraph {
+    margin: 6px 0;
+}
+
+.ai-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 6px 0;
+}
+
+.ai-list-item {
+    padding: 2px 0 2px 16px;
+    position: relative;
+}
+
+.ai-list-item::before {
+    content: "•";
+    position: absolute;
+    left: 4px;
+    color: var(--text-secondary);
+}
+
+.ai-inline-code {
+    background: var(--bg-tertiary);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--font-code);
+    font-size: 12px;
+    color: #e5c07b;
+}
+
+.ai-code-block {
+    background: var(--bg-tertiary);
+    padding: 8px 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.ai-code-block code {
+    font-family: var(--font-code);
+    font-size: 12px;
+    color: var(--text-primary);
+}
+
+.ai-loading {
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 8px 0;
+}
+
+.ai-error {
+    color: var(--accent-danger);
+    font-size: 13px;
+    padding: 8px 0;
+}
+
+/* AI备注按钮 */
+.btn-ai-notes {
+    background: var(--accent);
+    color: #fff;
+    opacity: 0.85;
+}
+
+.btn-ai-notes:active {
+    opacity: 1;
+}
+
+/* AI备注标识 */
+.note-ai-badge {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--accent);
+    color: #fff;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
