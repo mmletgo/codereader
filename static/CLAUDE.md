@@ -8,7 +8,7 @@
 - `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar；≥1440px断点：更宽侧边栏、更大字体）
 - `js/app.js` — 应用入口，hash路由管理（5条路由规则），项目列表页渲染和创建/删除逻辑
 - `js/api.js` — API请求封装（统一fetch wrapper，自动分页加载getAllFunctions，markRead标记已读）
-- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载）
+- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载、PC端侧边栏函数列表渲染与搜索）
 - `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
 - `js/ai.js` — AI辅助分析模块（函数解读面板展开/折叠、行级代码解释、AI自动备注生成、简单Markdown渲染、前端缓存+防重复请求）
 - `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存、AI备注显示AI标识）

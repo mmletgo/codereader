@@ -140,30 +140,23 @@
     transform: translateY(-50%);
     height: 18px;
     border-radius: 3px;
-    border: 1px solid var(--border);
-    background: var(--bg-secondary);
-    color: var(--accent);
+    border: 1px solid var(--accent);
+    background: rgba(97, 175, 239, 0.25);
+    color: #fff;
     font-size: 10px;
     font-weight: 600;
     font-family: var(--font-code);
     cursor: pointer;
     padding: 0 4px;
     line-height: 16px;
-    opacity: 0.4;
-    transition: opacity 0.15s, border-color 0.15s;
+    transition: background 0.15s;
     white-space: nowrap;
-}
-
-.line:hover .line-call-btn {
-    opacity: 0.8;
 }
 
 .line-call-btn:hover,
 .line-call-btn:active,
 .line-call-btn.active {
-    opacity: 1;
-    border-color: var(--accent);
-    background: rgba(97, 175, 239, 0.15);
+    background: rgba(97, 175, 239, 0.45);
 }
 
 /* ========== Line Call Info ========== */
@@ -228,32 +221,26 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
+    border: 1px solid var(--text-secondary);
+    background: rgba(99, 109, 131, 0.35);
+    color: #fff;
     font-size: 10px;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.3;
-    transition: opacity 0.15s, border-color 0.15s;
+    transition: border-color 0.15s, color 0.15s;
     padding: 0;
     line-height: 1;
     font-family: var(--font-ui);
 }
 
-.line:hover .line-ai-btn {
-    opacity: 0.7;
-}
-
 .line-ai-btn:hover,
 .line-ai-btn:active {
-    opacity: 1;
     border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(97, 175, 239, 0.1);
+    color: #fff;
+    background: rgba(97, 175, 239, 0.4);
 }
 
 /* ========== AI Line Explanation ========== */
