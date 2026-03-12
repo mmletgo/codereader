@@ -27,7 +27,7 @@
 /* ========== Line Numbers ========== */
 .line {
     display: block;
-    padding-left: 52px;
+    padding-left: 98px;
     position: relative;
     white-space: pre;
     min-height: 1.6em;
@@ -106,6 +106,22 @@
 .hljs-operator { color: #56b6c2; }          /* 运算符: 青色 */
 .hljs-punctuation { color: #abb2bf; }       /* 标点: 默认色 */
 
+/* ========== Skeleton Loading ========== */
+.skeleton-line {
+    display: block;
+    height: 1.2em;
+    margin: 0.4em 12px 0.4em 98px;
+    background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
 /* ========== Code area empty state ========== */
 .code-empty {
     display: flex;
@@ -116,23 +132,106 @@
     font-size: 14px;
 }
 
-/* ========== AI Line Button ========== */
-.line {
-    padding-right: 32px;
-}
-
-.line-ai-btn {
+/* ========== Line Call Button ========== */
+.line-call-btn {
     position: absolute;
-    right: 4px;
+    left: 46px;
     top: 50%;
     transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
+    height: 18px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-code);
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 16px;
+    opacity: 0.4;
+    transition: opacity 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.line:hover .line-call-btn {
+    opacity: 0.8;
+}
+
+.line-call-btn:hover,
+.line-call-btn:active,
+.line-call-btn.active {
+    opacity: 1;
+    border-color: var(--accent);
+    background: rgba(97, 175, 239, 0.15);
+}
+
+/* ========== Line Call Info ========== */
+.line-call-info {
+    display: block;
+    padding: 6px 12px 6px 98px;
+    border-left: 3px solid var(--accent);
+    background: rgba(97, 175, 239, 0.05);
+}
+
+.line-call-item {
+    display: block;
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.line-call-item:hover {
+    background: rgba(97, 175, 239, 0.1);
+}
+
+.line-call-name {
+    display: block;
+    font-family: var(--font-code);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.line-call-file {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+}
+
+.line-call-doc {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-primary);
+    margin-top: 2px;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.line-call-doc.no-doc {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* ========== AI Line Button ========== */
+.line-ai-btn {
+    position: absolute;
+    left: 76px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     border: 1px solid var(--border);
     background: var(--bg-secondary);
     color: var(--text-secondary);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -160,7 +259,7 @@
 /* ========== AI Line Explanation ========== */
 .line-ai-explanation {
     display: block;
-    padding: 8px 12px 8px 52px;
+    padding: 8px 12px 8px 98px;
     border-left: 3px solid var(--accent);
     background: rgba(97, 175, 239, 0.05);
     font-family: var(--font-ui);

@@ -35,18 +35,24 @@ const Browse = {
         document.getElementById('filter-has-notes').checked = false;
         document.getElementById('filter-unread').checked = false;
         this._bindEvents();
-        await this._loadProject();
-        await this.loadFunctionList();
 
-        // 加载阅读进度
+        // 立即显示骨架屏
+        this._showSkeleton();
+
+        // 并行发起三个API请求
+        const [_, allFunctions, progress] = await Promise.all([
+            this._loadProject(),
+            API.getAllFunctions(projectId),
+            funcId ? Promise.resolve(null) : API.getProgress(projectId).catch(() => null),
+        ]);
+        this.functions = allFunctions;
+        this._unreadCount = this.functions.filter(f => !f.is_read).length;
+        this._applyFilter();
+
+        // 恢复阅读进度（和原逻辑相同）
         let resumeFuncId = funcId;
-        if (!resumeFuncId) {
-            try {
-                const progress = await API.getProgress(projectId);
-                if (progress.last_function_id) {
-                    resumeFuncId = progress.last_function_id;
-                }
-            } catch (_) { /* 忽略 */ }
+        if (!resumeFuncId && progress && progress.last_function_id) {
+            resumeFuncId = progress.last_function_id;
         }
 
         if (resumeFuncId) {
@@ -112,9 +118,16 @@ const Browse = {
         this.currentIndex = index;
         const func = this.filteredFunctions[index];
 
+        // 用列表数据立即渲染信息栏
+        document.getElementById('func-qualified-name').textContent = func.qualified_name;
+        const fileInfo = `\u{1F4C4} ${func.file_path}:${func.start_line}-${func.end_line}`;
+        document.getElementById('func-file-info').textContent = fileInfo;
+
         // 先尝试缓存
         let detail = this.cache.get(func.id);
         if (!detail) {
+            // 缓存未命中，显示骨架屏
+            this._showSkeleton();
             try {
                 detail = await API.getFunctionDetail(func.id);
                 this.cache.set(func.id, detail);
@@ -125,7 +138,7 @@ const Browse = {
         }
 
         this.currentDetail = detail;
-        this._renderInfo(detail);
+        this._renderInfo(detail);  // 用详细数据更新信息栏
 
         // 使用HTML缓存避免重复高亮计算
         const cachedHtml = this.htmlCache.get(func.id);
@@ -182,25 +195,18 @@ const Browse = {
         document.getElementById('func-file-info').textContent = fileInfo;
     },
 
-    /** 渲染代码+高亮 */
-    renderCode(detail) {
-        const codeEl = document.getElementById('code-block');
+    /** 构建代码HTML（高亮+行号+调用按钮+AI按钮） */
+    _buildCodeHtml(detail) {
         const startLine = detail.start_line;
-
-        // 先用 hljs.highlight 程序化高亮整段代码
         let highlighted = hljs.highlight(detail.body, { language: 'python' }).value;
-
-        // 补充 hljs 缺失的语义高亮（模拟 VSCode One Dark Pro）
         highlighted = this._enhanceHighlight(highlighted);
 
-        // 将高亮后的HTML按行拆分，处理跨行span标签
         const rawLines = highlighted.split('\n');
-        let openTags = []; // 跟踪跨行未闭合的span标签
-
+        let openTags = [];
+        const lineCalls = detail.line_calls || {};
         const wrappedLines = rawLines.map((line, i) => {
             const lineNum = startLine + i;
             const prefix = openTags.join('');
-
             const tagRegex = /<\/?span[^>]*>/g;
             let match;
             while ((match = tagRegex.exec(line)) !== null) {
@@ -210,16 +216,21 @@ const Browse = {
                     openTags.push(match[0]);
                 }
             }
-
             const suffix = '</span>'.repeat(openTags.length);
-            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}<button class="line-ai-btn" data-line="${lineNum}" title="AI解释">?</button></span>`;
+            const callees = lineCalls[String(lineNum)];
+            const callBtn = callees ? `<button class="line-call-btn" data-line="${lineNum}" title="查看调用的函数">f(${callees.length})</button>` : '';
+            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}${callBtn}<button class="line-ai-btn" data-line="${lineNum}" title="AI解释">?</button></span>`;
         });
+        return wrappedLines.join('\n');
+    },
 
-        const html = wrappedLines.join('\n');
+    /** 渲染代码+高亮 */
+    renderCode(detail) {
+        const html = this._buildCodeHtml(detail);
+        const codeEl = document.getElementById('code-block');
         codeEl.innerHTML = html;
         codeEl.className = 'language-python hljs';
         this.htmlCache.set(detail.id, html);
-
         document.getElementById('browse-code').scrollTop = 0;
     },
 
@@ -228,72 +239,52 @@ const Browse = {
      * 模拟 VSCode One Dark Pro 的语义高亮效果
      */
     _enhanceHighlight(html) {
-        // 辅助：只替换不在 <span> 标签内部的文本
-        const replaceOutsideTags = (str, regex, replacer) => {
-            // 将HTML拆分为标签和文本片段
-            const parts = str.split(/(<[^>]*>)/);
-            let inSpan = 0;
-            return parts.map(part => {
-                if (part.startsWith('<')) {
-                    // 跳过已被hljs高亮的内容（在hljs span内部不做二次处理）
-                    if (part.startsWith('<span class="hljs-')) inSpan++;
-                    else if (part === '</span>' && inSpan > 0) inSpan--;
-                    return part;
-                }
-                if (inSpan > 0) return part;
-                return part.replace(regex, replacer);
-            }).join('');
-        };
-
-        // 1. 函数/方法调用: word( → 高亮 word 为函数色
-        html = replaceOutsideTags(html,
-            /\b([a-zA-Z_]\w*)\s*(?=\()/g,
-            (m, name) => {
+        const parts = html.split(/(<[^>]*>)/);
+        let inSpan = 0;
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            if (part.startsWith('<')) {
+                if (part.startsWith('<span class="hljs-')) inSpan++;
+                else if (part === '</span>' && inSpan > 0) inSpan--;
+                continue;
+            }
+            if (inSpan > 0) continue;
+            let t = part;
+            // 1. 函数/方法调用: word( → 高亮为函数色
+            t = t.replace(/\b([a-zA-Z_]\w*)\s*(?=\()/g, (m, name) => {
                 if (_PY_KEYWORDS.has(name)) return m;
                 return `<span class="syn-func-call">${name}</span>`;
-            }
-        );
-
-        // 2. 大写开头的标识符 → 类名（PascalCase）
-        html = replaceOutsideTags(html,
-            /\b([A-Z][a-zA-Z0-9_]*)\b/g,
-            (m, name) => {
-                // 排除全大写常量如 TRUE, FALSE, NONE (已被hljs处理), 和单字母
+            });
+            // 2. 大写开头标识符 → 类名（PascalCase）
+            t = t.replace(/\b([A-Z][a-zA-Z0-9_]*)\b/g, (m, name) => {
                 if (name === name.toUpperCase() && name.length > 1) return m;
                 return `<span class="syn-class-name">${name}</span>`;
-            }
-        );
-
-        // 3. self / cls 关键字
-        html = replaceOutsideTags(html,
-            /\b(self|cls)\b/g,
-            '<span class="syn-self">$1</span>'
-        );
-
-        // 4. 装饰器 @ 符号后的名称（hljs可能已处理，作为补充）
-        html = replaceOutsideTags(html,
-            /(@)([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)/g,
-            '<span class="syn-decorator">$1$2</span>'
-        );
-
-        // 5. 点号后的方法/属性名
-        html = replaceOutsideTags(html,
-            /\.([a-zA-Z_]\w*)\s*(?=\()/g,
-            '.<span class="syn-method-call">$1</span>'
-        );
-
-        return html;
+            });
+            // 3. self / cls
+            t = t.replace(/\b(self|cls)\b/g, '<span class="syn-self">$1</span>');
+            // 4. 装饰器
+            t = t.replace(/(@)([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)/g, '<span class="syn-decorator">$1$2</span>');
+            // 5. 点号后方法调用
+            t = t.replace(/\.([a-zA-Z_]\w*)\s*(?=\()/g, '.<span class="syn-method-call">$1</span>');
+            parts[i] = t;
+        }
+        return parts.join('');
     },
 
     /** 预加载相邻函数（detail + HTML渲染） */
     _preloadAdjacent(index) {
-        const indices = [index - 1, index + 1];
+        // 先预加载下一个(index+1)，再预加载上一个(index-1)
+        const indices = [index + 1, index - 1];
         for (const i of indices) {
             if (i < 0 || i >= this.filteredFunctions.length) continue;
             const func = this.filteredFunctions[i];
             if (this.cache.has(func.id) && this.htmlCache.has(func.id)) continue;
-            // 异步预加载，不阻塞当前渲染
-            this._preloadOne(func).catch(() => {});
+            const schedFn = typeof requestIdleCallback === 'function'
+                ? (fn) => requestIdleCallback(fn, { timeout: 3000 })
+                : (fn) => setTimeout(fn, 100);
+            schedFn(() => {
+                this._preloadOne(func).catch(() => {});
+            });
         }
     },
 
@@ -305,35 +296,19 @@ const Browse = {
             this.cache.set(func.id, detail);
         }
         if (!this.htmlCache.has(func.id)) {
-            this._preRenderHtml(detail);
+            const schedFn = typeof requestIdleCallback === 'function'
+                ? (fn) => requestIdleCallback(fn, { timeout: 3000 })
+                : (fn) => setTimeout(fn, 100);
+            schedFn(() => {
+                this._preRenderHtml(detail);
+            });
         }
         AI.preloadExplanation(func.id).catch(() => {});
     },
 
     /** 预渲染HTML（不操作DOM） */
     _preRenderHtml(detail) {
-        const startLine = detail.start_line;
-        let highlighted = hljs.highlight(detail.body, { language: 'python' }).value;
-        highlighted = this._enhanceHighlight(highlighted);
-
-        const rawLines = highlighted.split('\n');
-        let openTags = [];
-        const wrappedLines = rawLines.map((line, i) => {
-            const lineNum = startLine + i;
-            const prefix = openTags.join('');
-            const tagRegex = /<\/?span[^>]*>/g;
-            let match;
-            while ((match = tagRegex.exec(line)) !== null) {
-                if (match[0].startsWith('</')) {
-                    openTags.pop();
-                } else {
-                    openTags.push(match[0]);
-                }
-            }
-            const suffix = '</span>'.repeat(openTags.length);
-            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}<button class="line-ai-btn" data-line="${lineNum}" title="AI解释">?</button></span>`;
-        });
-        this.htmlCache.set(detail.id, wrappedLines.join('\n'));
+        this.htmlCache.set(detail.id, this._buildCodeHtml(detail));
     },
 
     /** 上一个函数 */
@@ -358,6 +333,17 @@ const Browse = {
             `${current}/${total}` + (this._unreadCount > 0 ? ` (未读${this._unreadCount})` : '');
         document.getElementById('btn-prev').disabled = this.currentIndex <= 0;
         document.getElementById('btn-next').disabled = this.currentIndex >= total - 1;
+    },
+
+    /** 显示骨架屏加载占位 */
+    _showSkeleton() {
+        const codeEl = document.getElementById('code-block');
+        const lines = Array.from({length: 8}, (_, i) => {
+            const w = 40 + Math.random() * 50; // 40%-90% 宽度随机
+            return `<span class="skeleton-line" style="width:${w}%"></span>`;
+        });
+        codeEl.innerHTML = lines.join('\n');
+        codeEl.className = 'language-python';
     },
 
     /** 渲染空状态 */
@@ -456,13 +442,70 @@ const Browse = {
             location.hash = `#/project/${this.projectId}/export`;
         });
 
-        // AI行级解释 - 事件委托
+        // 行级调用信息 + AI行级解释 - 事件委托
         document.getElementById('code-block').addEventListener('click', (e) => {
-            const btn = e.target.closest('.line-ai-btn');
-            if (!btn) return;
+            const callBtn = e.target.closest('.line-call-btn');
+            if (callBtn) {
+                e.stopPropagation();
+                const lineNum = callBtn.dataset.line;
+                const lineEl = callBtn.closest('.line');
+                if (!lineEl || !Browse.currentDetail) return;
+                const lineCalls = Browse.currentDetail.line_calls || {};
+                const callees = lineCalls[lineNum];
+                if (!callees || callees.length === 0) return;
+
+                // 切换展开/折叠
+                const existing = lineEl.nextElementSibling;
+                if (existing && existing.classList.contains('line-call-info')) {
+                    existing.remove();
+                    callBtn.classList.remove('active');
+                    return;
+                }
+
+                // 创建展开区
+                const infoDiv = document.createElement('span');
+                infoDiv.className = 'line-call-info';
+                infoDiv.style.display = 'block';
+                const items = callees.map(c => {
+                    const ds = c.docstring ? `<span class="line-call-doc">${Browse._escapeHtml(c.docstring)}</span>` : '<span class="line-call-doc no-doc">无文档说明</span>';
+                    return `<span class="line-call-item" data-func-id="${c.id}"><span class="line-call-name">${Browse._escapeHtml(c.qualified_name)}</span><span class="line-call-file">${Browse._escapeHtml(c.file_path)}</span>${ds}</span>`;
+                }).join('');
+                infoDiv.innerHTML = items;
+                lineEl.after(infoDiv);
+                callBtn.classList.add('active');
+
+                // 点击函数名跳转
+                infoDiv.addEventListener('click', (ev) => {
+                    const item = ev.target.closest('.line-call-item');
+                    if (!item) return;
+                    const funcId = parseInt(item.dataset.funcId);
+                    const idx = Browse.filteredFunctions.findIndex(f => f.id === funcId);
+                    if (idx >= 0) {
+                        Browse.showFunction(idx);
+                    } else {
+                        // 不在当前筛选列表中，尝试在全部函数中查找
+                        const allIdx = Browse.functions.findIndex(f => f.id === funcId);
+                        if (allIdx >= 0) {
+                            // 临时取消筛选
+                            Browse.filterHasNotes = false;
+                            Browse.filterUnread = false;
+                            document.getElementById('filter-has-notes').checked = false;
+                            document.getElementById('filter-unread').checked = false;
+                            Browse._applyFilter();
+                            const newIdx = Browse.filteredFunctions.findIndex(f => f.id === funcId);
+                            if (newIdx >= 0) Browse.showFunction(newIdx);
+                        }
+                    }
+                });
+                return;
+            }
+
+            // AI行级解释
+            const aiBtn = e.target.closest('.line-ai-btn');
+            if (!aiBtn) return;
             e.stopPropagation();
-            const lineNum = parseInt(btn.dataset.line);
-            const lineEl = btn.closest('.line');
+            const lineNum = parseInt(aiBtn.dataset.line);
+            const lineEl = aiBtn.closest('.line');
             if (!lineEl || !Browse.currentDetail) return;
             // 获取该行纯文本内容
             const lineContent = lineEl.textContent.replace(/\?$/, '').trim();
