@@ -109,6 +109,19 @@ class NoteResponse(BaseModel):
     updated_at: str
 
 
+# ========== Reading Progress ==========
+
+class ProgressUpdate(BaseModel):
+    last_function_id: int | None = None
+    read_function_ids: list[int] | None = None
+
+
+class ProgressResponse(BaseModel):
+    project_id: int
+    last_function_id: int | None = None
+    read_function_ids: list[int] = []
+
+
 # ========== Call Graph ==========
 
 class GraphNode(BaseModel):

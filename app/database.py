@@ -94,6 +94,14 @@ CREATE INDEX IF NOT EXISTS idx_functions_sort ON functions(project_id, sort_orde
 CREATE INDEX IF NOT EXISTS idx_call_relations_caller ON call_relations(caller_id);
 CREATE INDEX IF NOT EXISTS idx_call_relations_callee ON call_relations(callee_id);
 CREATE INDEX IF NOT EXISTS idx_call_relations_project ON call_relations(project_id);
+CREATE TABLE IF NOT EXISTS reading_progress (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id          INTEGER NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+    last_function_id    INTEGER,
+    read_function_ids   TEXT DEFAULT '[]',
+    updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_notes_function ON notes(function_id);
 CREATE INDEX IF NOT EXISTS idx_notes_project ON notes(project_id);
 """

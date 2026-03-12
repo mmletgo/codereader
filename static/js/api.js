@@ -162,4 +162,22 @@ const API = {
         }
         return resp.text();
     },
+
+    // ========== Reading Progress ==========
+
+    /** 获取阅读进度 */
+    async getProgress(projectId) {
+        return this.request(`/progress/?project_id=${projectId}`);
+    },
+
+    /** 保存阅读进度 */
+    async saveProgress(projectId, lastFunctionId, readFunctionIds) {
+        const body = {};
+        if (lastFunctionId != null) body.last_function_id = lastFunctionId;
+        if (readFunctionIds != null) body.read_function_ids = readFunctionIds;
+        return this.request(`/progress/?project_id=${projectId}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+    },
 };
