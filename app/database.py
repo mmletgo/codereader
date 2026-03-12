@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS reading_progress (
 
 CREATE INDEX IF NOT EXISTS idx_notes_function ON notes(function_id);
 CREATE INDEX IF NOT EXISTS idx_notes_project ON notes(project_id);
+CREATE INDEX IF NOT EXISTS idx_call_relations_caller_callee ON call_relations(caller_id, callee_id);
 
 CREATE TABLE IF NOT EXISTS ai_explanations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
