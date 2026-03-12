@@ -27,6 +27,22 @@
     <td><img src="docs/screenshots/pc-graph.png" width="400" alt="PC端调用关系图"></td>
     <td><img src="docs/screenshots/pc-export.png" width="400" alt="PC端导出页面"></td>
   </tr>
+  <tr>
+    <td><b>行级调用展开 f(N)</b></td>
+    <td><b>行级 AI 解释</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/pc-browse-callees.png" width="400" alt="行级调用展开"></td>
+    <td><img src="docs/screenshots/pc-line-explain.png" width="400" alt="行级AI解释"></td>
+  </tr>
+  <tr>
+    <td><b>AI 解读 + 阅后备注</b></td>
+    <td><b>AI 函数解读面板</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/pc-ai-and-notes.png" width="400" alt="AI解读与备注"></td>
+    <td><img src="docs/screenshots/pc-ai-panel.png" width="400" alt="AI函数解读面板"></td>
+  </tr>
 </table>
 
 ### 移动端
