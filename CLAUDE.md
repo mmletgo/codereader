@@ -31,3 +31,18 @@
 
 ## 函数浏览排序逻辑
 默认按调用关系排序：找到入口函数（无调用者），DFS遍历调用链，赋予sort_order值。未被调用链覆盖的函数按文件路径+行号追加。
+
+## 启动方式
+```bash
+cd /home/hans/python_project/codereader
+python main.py
+```
+- 服务监听 0.0.0.0:8080
+- 本机访问: http://localhost:8080
+- 局域网手机访问: http://{本机IP}:8080
+
+## 重要设计决策
+- 分析引擎(engine.py)支持 `existing_project_id` 参数用于重新扫描，避免UNIQUE约束冲突
+- 重新扫描时通过qualified_name保留并重新绑定用户备注
+- 前端路由使用hash模式（#/project/{id}/browse 等），支持 ?func={id} 参数直接跳转函数
+- 导出格式面向AI优化：JSON包含函数签名+代码+调用关系+备注的完整上下文
