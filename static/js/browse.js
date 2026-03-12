@@ -362,6 +362,12 @@ const Browse = {
             document.getElementById('browse-menu').style.display = 'none';
         });
 
+        // 刷新代码（重新扫描）
+        document.getElementById('btn-rescan').addEventListener('click', () => {
+            document.getElementById('browse-menu').style.display = 'none';
+            this._rescan();
+        });
+
         // 返回按钮
         document.getElementById('browse-back').addEventListener('click', () => {
             location.hash = '#/';
@@ -390,6 +396,41 @@ const Browse = {
                 this.next();
             }
         });
+    },
+
+    /** 重新扫描项目代码 */
+    async _rescan() {
+        const overlay = document.getElementById('loading-overlay');
+        overlay.style.display = 'flex';
+        try {
+            await API.rescanProject(this.projectId);
+            // 清缓存，重新加载函数列表
+            this.cache.clear();
+            await this.loadFunctionList();
+            this._updateNav();
+            // 尝试保持当前函数
+            if (this.currentDetail) {
+                const idx = this.filteredFunctions.findIndex(
+                    f => f.qualified_name === this.currentDetail.qualified_name
+                );
+                if (idx >= 0) {
+                    this.cache.delete(this.filteredFunctions[idx].id);
+                    await this.showFunction(idx);
+                } else if (this.filteredFunctions.length > 0) {
+                    await this.showFunction(0);
+                } else {
+                    this._renderEmpty();
+                }
+            } else if (this.filteredFunctions.length > 0) {
+                await this.showFunction(0);
+            } else {
+                this._renderEmpty();
+            }
+        } catch (err) {
+            document.getElementById('code-block').textContent = '刷新失败: ' + err.message;
+        } finally {
+            overlay.style.display = 'none';
+        }
     },
 
     /** HTML转义 */

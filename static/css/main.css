@@ -142,6 +142,20 @@ html, body {
     height: 18px;
 }
 
+.dropdown-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+
+.dropdown-btn {
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+}
+
 /* ========== View Body ========== */
 .view-body {
     flex: 1;
