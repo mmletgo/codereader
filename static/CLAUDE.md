@@ -1,29 +1,44 @@
 # static/ - 前端静态文件
 
 ## 文件结构
-- `index.html` — SPA入口，引入所有CSS/JS，定义页面骨架
-- `css/main.css` — 主样式（移动端响应式，flex布局，触控优化）
-- `css/code.css` — 代码区域样式（行号、高亮主题适配）
-- `css/graph.css` — 调用关系图样式
-- `js/app.js` — 应用入口，hash路由管理（#/ #/project/{id}/browse 等）
-- `js/api.js` — API请求封装（fetch wrapper）
-- `js/browse.js` — 核心：函数浏览器（左右按钮切换函数、代码高亮渲染）
-- `js/graph.js` — D3.js调用关系横向树状图
-- `js/notes.js` — 备注面板（可折叠、增删改、类型选择）
-- `js/list.js` — 函数列表页（搜索、筛选、按文件分组）
-- `js/export.js` — 导出页面（格式选择、预览、下载）
-- `lib/` — 第三方库本地文件（highlight.min.js, d3.min.js等）
+- `index.html` — SPA入口，引入所有CSS/JS，定义5个section视图容器和新建项目对话框
+- `css/main.css` — 主样式（暗色主题变量、flex布局、触控44px最小高度、响应式组件）
+- `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖）
+- `css/graph.css` — D3调用关系图节点/连线/缩放样式
+- `js/app.js` — 应用入口，hash路由管理（5条路由规则），项目列表页渲染和创建/删除逻辑
+- `js/api.js` — API请求封装（统一fetch wrapper，自动分页加载getAllFunctions）
+- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、键盘左右箭头快捷键）
+- `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
+- `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存）
+- `js/list.js` — 函数列表页（按文件分组、搜索debounce 300ms、点击跳转浏览器）
+- `js/export.js` — 导出页面（JSON/Markdown格式切换、预览缓存、Blob下载）
+- `lib/` — 第三方库本地文件（highlight.min.js, highlight-python.min.js, d3.min.js, github-dark.min.css）
 
 ## 前端架构
 纯HTML/CSS/JS单页应用，hash路由，无构建步骤。
-页面视图通过JS动态切换DOM显示/隐藏。
+- 5个视图section通过display:flex/none切换，App.route()根据location.hash分发
+- 全局对象：API、Browse、Notes、Graph、List、Export、App
+- 模块间通信：Notes直接访问Browse.currentDetail和Browse.cache更新备注数据
+
+## 5个视图路由
+- `#/` — 项目列表页（view-projects），卡片式布局，新建/删除项目
+- `#/project/{id}/browse?func={funcId}` — 函数浏览器（view-browse），支持func参数直接跳转
+- `#/project/{id}/graph` — 调用关系图（view-graph），D3横向树
+- `#/project/{id}/list` — 函数列表（view-list），搜索+按文件分组
+- `#/project/{id}/export` — 导出（view-export），JSON/Markdown预览+下载
 
 ## 移动端交互设计
 - 函数浏览：底部导航栏左右箭头按钮切换函数，上下滚动查看代码
-- 函数默认按调用关系排序（后端sort_order字段）
-- 代码区域：highlight.js语法高亮，带行号
-- 备注面板：页面底部，可折叠展开
-- 调用关系图：D3.js横向树（左到右），支持双指缩放和拖拽，节点可点击跳转
+- 函数默认按调用关系排序（后端sort_order字段），进入时一次性加载全部函数基本信息
+- 代码区域：highlight.js语法高亮，每行用`<span class="line" data-line="N">`包裹实现行号
+- 备注面板：页面底部，点击"备注(N)"切换展开/折叠，展开时代码区自动缩小
+- 调用关系图：D3.js横向树（左到右），支持双指缩放和拖拽，有备注的节点红色高亮，节点可点击跳转
+
+## 暗色主题变量
+- --bg-primary: #0d1117, --bg-secondary: #161b22, --bg-tertiary: #21262d
+- --text-primary: #e6edf3, --text-secondary: #8b949e
+- --accent: #58a6ff, --accent-danger: #f85149, --accent-success: #3fb950
+- --border: #30363d
 
 ## API接口（后端提供）
 - GET /api/v1/projects/ — 项目列表
@@ -31,7 +46,7 @@
 - DELETE /api/v1/projects/{id} — 删除项目
 - POST /api/v1/projects/{id}/rescan — 重新扫描
 - GET /api/v1/functions/?project_id=X&page=1&per_page=50 — 函数分页列表
-- GET /api/v1/functions/{id} — 函数详情（含代码、调用关系、备注）
+- GET /api/v1/functions/{id} — 函数详情（含代码body、调用关系callers/callees、备注notes）
 - GET /api/v1/call_graph/?project_id=X — 调用关系图数据(nodes+links)
 - POST /api/v1/notes/ — 添加备注(body: {function_id, project_id, content, note_type})
 - PUT /api/v1/notes/{id} — 更新备注

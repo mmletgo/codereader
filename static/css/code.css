@@ -1,0 +1,68 @@
+/* ========== Code Display Area ========== */
+.browse-code {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    background: var(--bg-primary);
+    -webkit-overflow-scrolling: touch;
+}
+
+.browse-code pre {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.browse-code code {
+    display: block;
+    padding: 12px 12px 12px 0;
+    font-family: var(--font-code);
+    font-size: 14px;
+    line-height: 1.6;
+    tab-size: 4;
+    background: transparent !important;
+}
+
+/* ========== Line Numbers ========== */
+.line {
+    display: block;
+    padding-left: 52px;
+    position: relative;
+    white-space: pre;
+    min-height: 1.6em;
+}
+
+.line::before {
+    content: attr(data-line);
+    position: absolute;
+    left: 0;
+    width: 40px;
+    padding-right: 8px;
+    text-align: right;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    font-size: 12px;
+    line-height: 1.6;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.line:hover {
+    background: rgba(88, 166, 255, 0.05);
+}
+
+/* ========== highlight.js theme overrides for dark background ========== */
+.hljs {
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+/* ========== Code area empty state ========== */
+.code-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    font-size: 14px;
+}

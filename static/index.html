@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CodeReader</title>
+    <link rel="stylesheet" href="lib/github-dark.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/code.css">
+    <link rel="stylesheet" href="css/graph.css">
+</head>
+<body>
+    <!-- 视图1: 项目列表页 -->
+    <section id="view-projects" class="view">
+        <header class="top-bar">
+            <div class="top-bar-title">CodeReader</div>
+        </header>
+        <div class="view-body">
+            <div id="projects-list" class="projects-list"></div>
+            <div id="projects-empty" class="empty-state" style="display:none;">
+                <div class="empty-icon">📂</div>
+                <p>还没有项目</p>
+                <p class="text-secondary">点击下方按钮添加一个Python项目目录</p>
+            </div>
+            <button id="btn-new-project" class="fab" title="新建项目">+</button>
+        </div>
+        <!-- 新建项目对话框 -->
+        <div id="dialog-new-project" class="dialog-overlay" style="display:none;">
+            <div class="dialog">
+                <h3>新建项目</h3>
+                <label class="input-label">目录路径</label>
+                <input type="text" id="input-project-path" class="input" placeholder="/path/to/python/project">
+                <label class="input-label">项目名称（可选）</label>
+                <input type="text" id="input-project-name" class="input" placeholder="留空则自动使用目录名">
+                <div class="dialog-actions">
+                    <button id="btn-cancel-project" class="btn btn-secondary">取消</button>
+                    <button id="btn-confirm-project" class="btn btn-primary">创建并扫描</button>
+                </div>
+                <div id="project-create-error" class="error-msg" style="display:none;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 视图2: 函数浏览器 -->
+    <section id="view-browse" class="view" style="display:none;">
+        <header class="top-bar">
+            <button class="top-bar-back" id="browse-back">&larr;</button>
+            <div class="top-bar-title">CodeReader</div>
+            <span id="browse-project-name" class="top-bar-subtitle"></span>
+            <button class="top-bar-menu" id="browse-menu-btn">&#9776;</button>
+            <div id="browse-menu" class="dropdown-menu" style="display:none;">
+                <label class="dropdown-item">
+                    <input type="checkbox" id="filter-has-notes"> 只看有备注的函数
+                </label>
+            </div>
+        </header>
+        <div class="browse-info" id="browse-info">
+            <div class="func-qualified-name" id="func-qualified-name"></div>
+            <div class="func-file-info" id="func-file-info"></div>
+        </div>
+        <div class="browse-code" id="browse-code">
+            <pre><code id="code-block" class="language-python"></code></pre>
+        </div>
+        <div class="browse-nav" id="browse-nav">
+            <button class="nav-btn" id="btn-prev" title="上一个函数">&laquo;</button>
+            <span class="nav-counter" id="nav-counter">0/0</span>
+            <button class="nav-btn" id="btn-next" title="下一个函数">&raquo;</button>
+            <div class="nav-spacer"></div>
+            <button class="nav-btn nav-btn-icon" id="btn-goto-graph" title="调用关系图">&#128436;</button>
+            <button class="nav-btn nav-btn-icon" id="btn-goto-list" title="函数列表">&#9776;</button>
+            <button class="nav-btn nav-btn-icon" id="btn-goto-export" title="导出">&#128190;</button>
+        </div>
+        <div class="notes-panel" id="notes-panel">
+            <button class="notes-toggle" id="notes-toggle">
+                <span class="notes-toggle-arrow">&#9650;</span>
+                <span id="notes-toggle-text">备注(0)</span>
+            </button>
+            <div class="notes-body" id="notes-body" style="display:none;">
+                <div class="notes-form">
+                    <select id="note-type-select" class="input note-type-select">
+                        <option value="general">通用</option>
+                        <option value="bug">Bug</option>
+                        <option value="todo">TODO</option>
+                        <option value="refactor">重构</option>
+                        <option value="question">疑问</option>
+                    </select>
+                    <input type="text" id="note-input" class="input note-input" placeholder="输入备注...">
+                    <button id="btn-add-note" class="btn btn-primary btn-sm">保存</button>
+                </div>
+                <div id="notes-list" class="notes-list"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 视图3: 调用关系图 -->
+    <section id="view-graph" class="view" style="display:none;">
+        <header class="top-bar">
+            <button class="top-bar-back" id="graph-back">&larr;</button>
+            <div class="top-bar-title">调用关系图</div>
+        </header>
+        <div class="graph-container" id="graph-container">
+            <svg id="graph-svg"></svg>
+        </div>
+    </section>
+
+    <!-- 视图4: 函数列表 -->
+    <section id="view-list" class="view" style="display:none;">
+        <header class="top-bar">
+            <button class="top-bar-back" id="list-back">&larr;</button>
+            <div class="top-bar-title">函数列表</div>
+        </header>
+        <div class="list-search-bar">
+            <input type="text" id="list-search-input" class="input" placeholder="搜索函数名...">
+        </div>
+        <div class="list-body" id="list-body"></div>
+    </section>
+
+    <!-- 视图5: 导出页面 -->
+    <section id="view-export" class="view" style="display:none;">
+        <header class="top-bar">
+            <button class="top-bar-back" id="export-back">&larr;</button>
+            <div class="top-bar-title">导出阅后记录</div>
+        </header>
+        <div class="export-body">
+            <div class="export-format-bar">
+                <button class="btn btn-format active" id="btn-format-json" data-format="json">JSON</button>
+                <button class="btn btn-format" id="btn-format-md" data-format="markdown">Markdown</button>
+            </div>
+            <pre class="export-preview" id="export-preview"></pre>
+            <button class="btn btn-primary btn-block" id="btn-download">下载文件</button>
+        </div>
+    </section>
+
+    <!-- 全局加载指示器 -->
+    <div id="loading-overlay" class="loading-overlay" style="display:none;">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- JS: 第三方库 -->
+    <script src="lib/highlight.min.js"></script>
+    <script src="lib/highlight-python.min.js"></script>
+    <script src="lib/d3.min.js"></script>
+    <!-- JS: 应用模块 -->
+    <script src="js/api.js"></script>
+    <script src="js/notes.js"></script>
+    <script src="js/browse.js"></script>
+    <script src="js/graph.js"></script>
+    <script src="js/list.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
