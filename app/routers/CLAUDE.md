@@ -40,3 +40,8 @@
 
 ### export.py
 - `GET /` — 导出(project_id必须, format=json|markdown)，只导出有备注的函数
+
+### ai.py
+- `GET /explanation` — 获取/生成函数AI解读（function_id查询参数），带缓存（基于函数体SHA256哈希判断失效）
+- `POST /line-explain` — 行级代码解释（请求体：function_id, line_number, line_content）
+- `POST /auto-notes` — 生成AI自动备注（请求体：function_id, project_id），备注source='ai'

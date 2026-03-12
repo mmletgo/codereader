@@ -105,6 +105,15 @@ CREATE TABLE IF NOT EXISTS reading_progress (
 
 CREATE INDEX IF NOT EXISTS idx_notes_function ON notes(function_id);
 CREATE INDEX IF NOT EXISTS idx_notes_project ON notes(project_id);
+
+CREATE TABLE IF NOT EXISTS ai_explanations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    function_id INTEGER NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
+    explanation TEXT NOT NULL,
+    func_body_hash TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(function_id)
+);
 """
 
 
@@ -114,6 +123,11 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
     columns = [row["name"] for row in conn.execute("PRAGMA table_info(functions)").fetchall()]
     if "is_read" not in columns:
         conn.execute("ALTER TABLE functions ADD COLUMN is_read BOOLEAN DEFAULT 0")
+
+    # 检查 notes 表是否已有 source 列
+    note_columns = [row["name"] for row in conn.execute("PRAGMA table_info(notes)").fetchall()]
+    if "source" not in note_columns:
+        conn.execute("ALTER TABLE notes ADD COLUMN source TEXT DEFAULT 'user'")
 
 
 def init_db() -> None:

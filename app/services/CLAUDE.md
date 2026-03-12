@@ -5,6 +5,7 @@
 - `function_service.py` — 函数查询（分页列表含计数、详情含调用关系+备注、caller/callee查询）
 - `note_service.py` — 备注CRUD（创建、更新非None字段、删除、按条件查询）
 - `export_service.py` — 导出逻辑（组装有备注函数的完整数据、渲染Markdown格式）
+- `ai_service.py` — AI辅助分析（函数解读生成与缓存、行级代码解释、自动备注生成），使用anthropic SDK调用Claude API
 
 ## 职责划分
 服务层封装业务逻辑和数据库查询，路由层只负责参数校验和响应序列化。

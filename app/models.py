@@ -56,6 +56,7 @@ class NoteInFunction(BaseModel):
     note_type: str
     created_at: str
     updated_at: str
+    source: str = "user"
 
 
 class FunctionDetail(BaseModel):
@@ -109,6 +110,7 @@ class NoteResponse(BaseModel):
     note_type: str
     created_at: str
     updated_at: str
+    source: str = "user"
 
 
 # ========== Reading Progress ==========
@@ -168,3 +170,31 @@ class ExportData(BaseModel):
     export_time: str
     summary: dict
     functions: list[ExportFunction]
+
+
+# ========== AI ==========
+
+class AIExplanationResponse(BaseModel):
+    function_id: int
+    explanation: str
+    cached: bool = False
+
+
+class AILineExplainRequest(BaseModel):
+    function_id: int
+    line_number: int
+    line_content: str
+
+
+class AILineExplainResponse(BaseModel):
+    line_number: int
+    explanation: str
+
+
+class AIAutoNotesRequest(BaseModel):
+    function_id: int
+    project_id: int
+
+
+class AIAutoNotesResponse(BaseModel):
+    notes: list[NoteResponse]

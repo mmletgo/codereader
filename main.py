@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from config import HOST, PORT, STATIC_DIR
 from app.database import init_db
-from app.routers import projects, functions, notes, call_graph, export, progress
+from app.routers import projects, functions, notes, call_graph, export, progress, ai
 
 
 @asynccontextmanager
@@ -26,6 +26,7 @@ app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 app.include_router(call_graph.router, prefix="/api/v1/call_graph", tags=["call_graph"])
 app.include_router(export.router, prefix="/api/v1/export", tags=["export"])
 app.include_router(progress.router, prefix="/api/v1/progress", tags=["progress"])
+app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
 
 # 静态文件（前端）- 必须放在API路由之后
 app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

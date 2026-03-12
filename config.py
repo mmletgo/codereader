@@ -21,3 +21,8 @@ DEFAULT_EXCLUDE: list[str] = [
     "*.pyc", "*.pyo", ".eggs", "*.egg-info",
     "dist", "build", ".hg", ".svn",
 ]
+
+# AI配置（Claude API）
+CLAUDE_API_BASE_URL: str = "https://api.anthropic.com"
+CLAUDE_API_KEY: str = ""
+CLAUDE_MODEL: str = "claude-sonnet-4-20250514"

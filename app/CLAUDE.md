@@ -6,12 +6,13 @@
 - `routers/` — API路由层（5个路由模块）
 - `services/` — 业务逻辑层（4个服务模块）
 
-## 数据库表结构 (5张表)
+## 数据库表结构 (6张表)
 - `projects` — 项目信息（路径、名称、扫描时间）
 - `files` — 源文件（内容、行数、语言）
 - `functions` — 函数定义（签名、代码体、行号、排序权重sort_order、已读状态is_read）
 - `call_relations` — 调用关系边（caller_id→callee_id，外部调用callee_id=NULL）
-- `notes` — 阅后备注（绑定function_id，类型note_type）
+- `notes` — 阅后备注（绑定function_id，类型note_type，来源source：'user'用户手动/'ai'AI生成）
+- `ai_explanations` — AI函数解读缓存（绑定function_id，存储explanation和func_body_hash用于缓存失效判断）
 
 ## 函数已读状态
 - 已读状态直接存储在 functions 表的 `is_read` 列（BOOLEAN DEFAULT 0）
