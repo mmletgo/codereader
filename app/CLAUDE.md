@@ -2,7 +2,7 @@
 
 ## 文件说明
 - `database.py` — SQLite数据库管理，建表语句，连接上下文管理器 `get_db()`，CRUD辅助函数，数据库迁移(`_migrate_db`)
-- `models.py` — 所有Pydantic模型定义（请求体、响应体、内部数据结构）
+- `models.py` — 所有Pydantic模型定义（请求体、响应体、内部数据结构），含CalleeOnLine（行级调用信息）
 - `routers/` — API路由层（5个路由模块）
 - `services/` — 业务逻辑层（4个服务模块）
 

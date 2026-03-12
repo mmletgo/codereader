@@ -78,11 +78,14 @@ class CallResolver:
         # 1. self.method / cls.method → 从 caller 的 class 中查找同类方法
         if callee_name.startswith("self.") or callee_name.startswith("cls."):
             method_name: str = callee_name.split(".", 1)[1]
+            # 跳过多级属性访问（如 self.logger.warning）
+            if "." in method_name:
+                return None
             # 从 caller_qname 推断类名: "ClassName.method_name" -> "ClassName"
             if "." in caller_qname:
                 caller_class: str = caller_qname.split(".")[0]
                 target_qname: str = f"{caller_class}.{method_name}"
-                # 在同文件中查找
+                # 在同文件中查找本类方法
                 if caller_file is not None:
                     key: str = f"{caller_file}::{target_qname}"
                     if key in self.qualified_name_map:
@@ -90,6 +93,18 @@ class CallResolver:
                 # 回退到全局搜索同名 qualified_name
                 if target_qname in self.name_map:
                     return target_qname
+                # 继承回退：在同文件中搜索任意类的同名方法（父类/Mixin）
+                if caller_file is not None:
+                    for func in self.file_func_map.get(caller_file, []):
+                        if func.name == method_name and func.is_method:
+                            return func.qualified_name
+                # 全局搜索同名方法（唯一匹配时采用）
+                candidates: list[FunctionInfo] = [
+                    f for f in self.name_map.get(method_name, [])
+                    if f.is_method
+                ]
+                if len(candidates) == 1:
+                    return candidates[0].qualified_name
             return None
 
         # 2. 直接调用 func() — 无点号

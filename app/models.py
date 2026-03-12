@@ -59,6 +59,15 @@ class NoteInFunction(BaseModel):
     source: str = "user"
 
 
+class CalleeOnLine(BaseModel):
+    """行级调用的被调用函数信息"""
+    id: int
+    name: str
+    qualified_name: str
+    file_path: str
+    docstring: str | None = None
+
+
 class FunctionDetail(BaseModel):
     id: int
     name: str
@@ -77,6 +86,7 @@ class FunctionDetail(BaseModel):
     callers: list[FunctionBrief]
     callees: list[FunctionBrief]
     notes: list[NoteInFunction]
+    line_calls: dict[str, list[CalleeOnLine]] = {}
 
 
 # ========== Function List (分页) ==========
