@@ -2,6 +2,11 @@
  * 函数浏览器模块
  * 核心页面：左右切换函数、代码高亮、行号显示
  */
+const _PY_KEYWORDS = new Set(['if','else','elif','for','while','with','as','try','except',
+    'finally','raise','return','yield','import','from','class','def','and','or',
+    'not','in','is','lambda','pass','break','continue','del','assert','global',
+    'nonlocal','async','await','print']);
+
 const Browse = {
     projectId: null,
     projectName: '',
@@ -10,9 +15,11 @@ const Browse = {
     currentIndex: 0,       // 当前在filteredFunctions中的索引
     currentDetail: null,   // 当前函数详情缓存
     cache: new Map(),      // id -> detail 缓存
+    htmlCache: new Map(),  // id -> rendered HTML string 缓存
     filterHasNotes: false, // 是否筛选有备注的
     filterUnread: false,   // 是否只显示未读函数
     _saveTimer: null,      // 防抖保存定时器
+    _unreadCount: 0,       // 未读函数计数（增量维护）
 
     /**
      * 初始化浏览器
@@ -22,6 +29,7 @@ const Browse = {
     async init(projectId, funcId) {
         this.projectId = projectId;
         this.cache.clear();
+        this.htmlCache.clear();
         this.filterHasNotes = false;
         this.filterUnread = false;
         document.getElementById('filter-has-notes').checked = false;
@@ -79,6 +87,7 @@ const Browse = {
     /** 加载所有函数基本信息 */
     async loadFunctionList() {
         this.functions = await API.getAllFunctions(this.projectId);
+        this._unreadCount = this.functions.filter(f => !f.is_read).length;
         this._applyFilter();
     },
 
@@ -102,7 +111,6 @@ const Browse = {
         if (index < 0 || index >= this.filteredFunctions.length) return;
         this.currentIndex = index;
         const func = this.filteredFunctions[index];
-        this._updateNav();
 
         // 先尝试缓存
         let detail = this.cache.get(func.id);
@@ -118,18 +126,33 @@ const Browse = {
 
         this.currentDetail = detail;
         this._renderInfo(detail);
-        this.renderCode(detail);
+
+        // 使用HTML缓存避免重复高亮计算
+        const cachedHtml = this.htmlCache.get(func.id);
+        if (cachedHtml) {
+            const codeEl = document.getElementById('code-block');
+            codeEl.innerHTML = cachedHtml;
+            codeEl.className = 'language-python hljs';
+            document.getElementById('browse-code').scrollTop = 0;
+        } else {
+            this.renderCode(detail);
+        }
+
         Notes.collapse();
         Notes.render(detail.notes, detail.id, this.projectId);
 
         // 标记已读
         if (!func.is_read) {
-            func.is_read = true;  // 更新本地数据
+            func.is_read = true;
             if (detail) detail.is_read = true;
-            API.markRead(func.id).catch(() => {});  // 异步发送，不阻塞
+            this._unreadCount = Math.max(0, this._unreadCount - 1);
+            API.markRead(func.id).catch(() => {});
         }
         this._updateNav();
         this._debounceSaveProgress();
+
+        // 预加载相邻函数
+        this._preloadAdjacent(index);
     },
 
     /** 防抖保存阅读进度（切换函数后1秒保存） */
@@ -190,8 +213,10 @@ const Browse = {
             return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}</span>`;
         });
 
-        codeEl.innerHTML = wrappedLines.join('\n');
+        const html = wrappedLines.join('\n');
+        codeEl.innerHTML = html;
         codeEl.className = 'language-python hljs';
+        this.htmlCache.set(detail.id, html);
 
         document.getElementById('browse-code').scrollTop = 0;
     },
@@ -222,12 +247,7 @@ const Browse = {
         html = replaceOutsideTags(html,
             /\b([a-zA-Z_]\w*)\s*(?=\()/g,
             (m, name) => {
-                // 排除已被 hljs 处理的关键字
-                const kwSet = new Set(['if','else','elif','for','while','with','as','try','except',
-                    'finally','raise','return','yield','import','from','class','def','and','or',
-                    'not','in','is','lambda','pass','break','continue','del','assert','global',
-                    'nonlocal','async','await','print']);
-                if (kwSet.has(name)) return m;
+                if (_PY_KEYWORDS.has(name)) return m;
                 return `<span class="syn-func-call">${name}</span>`;
             }
         );
@@ -263,6 +283,56 @@ const Browse = {
         return html;
     },
 
+    /** 预加载相邻函数（detail + HTML渲染） */
+    _preloadAdjacent(index) {
+        const indices = [index - 1, index + 1];
+        for (const i of indices) {
+            if (i < 0 || i >= this.filteredFunctions.length) continue;
+            const func = this.filteredFunctions[i];
+            if (this.cache.has(func.id) && this.htmlCache.has(func.id)) continue;
+            // 异步预加载，不阻塞当前渲染
+            this._preloadOne(func).catch(() => {});
+        }
+    },
+
+    /** 预加载单个函数 */
+    async _preloadOne(func) {
+        let detail = this.cache.get(func.id);
+        if (!detail) {
+            detail = await API.getFunctionDetail(func.id);
+            this.cache.set(func.id, detail);
+        }
+        if (!this.htmlCache.has(func.id)) {
+            this._preRenderHtml(detail);
+        }
+    },
+
+    /** 预渲染HTML（不操作DOM） */
+    _preRenderHtml(detail) {
+        const startLine = detail.start_line;
+        let highlighted = hljs.highlight(detail.body, { language: 'python' }).value;
+        highlighted = this._enhanceHighlight(highlighted);
+
+        const rawLines = highlighted.split('\n');
+        let openTags = [];
+        const wrappedLines = rawLines.map((line, i) => {
+            const lineNum = startLine + i;
+            const prefix = openTags.join('');
+            const tagRegex = /<\/?span[^>]*>/g;
+            let match;
+            while ((match = tagRegex.exec(line)) !== null) {
+                if (match[0].startsWith('</')) {
+                    openTags.pop();
+                } else {
+                    openTags.push(match[0]);
+                }
+            }
+            const suffix = '</span>'.repeat(openTags.length);
+            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}</span>`;
+        });
+        this.htmlCache.set(detail.id, wrappedLines.join('\n'));
+    },
+
     /** 上一个函数 */
     prev() {
         if (this.currentIndex > 0) {
@@ -281,9 +351,8 @@ const Browse = {
     _updateNav() {
         const total = this.filteredFunctions.length;
         const current = total > 0 ? this.currentIndex + 1 : 0;
-        const unreadCount = this.functions.filter(f => !f.is_read).length;
         document.getElementById('nav-counter').textContent =
-            `${current}/${total}` + (unreadCount > 0 ? ` (未读${unreadCount})` : '');
+            `${current}/${total}` + (this._unreadCount > 0 ? ` (未读${this._unreadCount})` : '');
         document.getElementById('btn-prev').disabled = this.currentIndex <= 0;
         document.getElementById('btn-next').disabled = this.currentIndex >= total - 1;
     },
@@ -406,6 +475,7 @@ const Browse = {
             await API.rescanProject(this.projectId);
             // 清缓存，重新加载函数列表
             this.cache.clear();
+            this.htmlCache.clear();
             await this.loadFunctionList();
             this._updateNav();
             // 尝试保持当前函数
