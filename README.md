@@ -144,6 +144,15 @@ model = "claude-sonnet-4-20250514"
 
 > 不配置也能启动，所有功能正常使用，仅 AI 解读/自动备注不可用。
 
+**不想订阅 Claude API？** 你可以使用任何兼容 Anthropic API 格式的第三方服务，只需修改 `base_url` 指向对应的代理网关即可。例如 [z.ai](https://z.ai) 的 Coding 套餐提供了低成本的兼容方案：
+
+```toml
+[ai]
+base_url = "https://api.z.ai"     # 替换为第三方服务地址
+api_key = "your-api-key"
+model = "claude-sonnet-4-20250514" # 按服务商支持的模型名填写
+```
+
 ### 3. 启动
 
 ```bash
