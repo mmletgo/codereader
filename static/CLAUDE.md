@@ -6,8 +6,8 @@
 - `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖）
 - `css/graph.css` — D3调用关系图节点/连线/缩放样式
 - `js/app.js` — 应用入口，hash路由管理（5条路由规则），项目列表页渲染和创建/删除逻辑
-- `js/api.js` — API请求封装（统一fetch wrapper，自动分页加载getAllFunctions）
-- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、键盘左右箭头快捷键）
+- `js/api.js` — API请求封装（统一fetch wrapper，自动分页加载getAllFunctions，markRead标记已读）
+- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键）
 - `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
 - `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存）
 - `js/list.js` — 函数列表页（按文件分组、搜索debounce 300ms、点击跳转浏览器）
@@ -52,3 +52,6 @@
 - PUT /api/v1/notes/{id} — 更新备注
 - DELETE /api/v1/notes/{id} — 删除备注
 - GET /api/v1/export/?project_id=X&format=json|markdown — 导出
+- PUT /api/v1/functions/{id}/read — 标记函数已读
+- GET /api/v1/progress/?project_id=X — 获取阅读进度（返回last_function_id）
+- PUT /api/v1/progress/?project_id=X — 保存阅读进度（body: {last_function_id?}）

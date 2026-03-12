@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS functions (
     class_name      TEXT,
     decorators      TEXT DEFAULT '[]',
     docstring       TEXT,
-    sort_order      INTEGER DEFAULT 0
+    sort_order      INTEGER DEFAULT 0,
+    is_read         BOOLEAN DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS call_relations (
@@ -107,11 +108,20 @@ CREATE INDEX IF NOT EXISTS idx_notes_project ON notes(project_id);
 """
 
 
+def _migrate_db(conn: sqlite3.Connection) -> None:
+    """数据库迁移：为已有表添加新列"""
+    # 检查 functions 表是否已有 is_read 列
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(functions)").fetchall()]
+    if "is_read" not in columns:
+        conn.execute("ALTER TABLE functions ADD COLUMN is_read BOOLEAN DEFAULT 0")
+
+
 def init_db() -> None:
-    """初始化数据库：创建目录和表"""
+    """初始化数据库：创建目录和表，执行迁移"""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with get_db() as conn:
         conn.executescript(_CREATE_TABLES_SQL)
+        _migrate_db(conn)
 
 
 # ========== CRUD 辅助函数 ==========

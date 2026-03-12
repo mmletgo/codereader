@@ -38,6 +38,7 @@ class FunctionListItem(BaseModel):
     note_count: int = 0
     caller_count: int = 0
     callee_count: int = 0
+    is_read: bool = False
 
 
 class FunctionBrief(BaseModel):
@@ -71,6 +72,7 @@ class FunctionDetail(BaseModel):
     body: str
     decorators: list[str]
     docstring: str | None = None
+    is_read: bool = False
     callers: list[FunctionBrief]
     callees: list[FunctionBrief]
     notes: list[NoteInFunction]
@@ -113,13 +115,11 @@ class NoteResponse(BaseModel):
 
 class ProgressUpdate(BaseModel):
     last_function_id: int | None = None
-    read_function_ids: list[int] | None = None
 
 
 class ProgressResponse(BaseModel):
     project_id: int
     last_function_id: int | None = None
-    read_function_ids: list[int] = []
 
 
 # ========== Call Graph ==========

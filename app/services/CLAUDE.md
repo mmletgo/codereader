@@ -13,11 +13,13 @@
 ## 关键逻辑
 
 ### project_service.py
-- `delete_scan_data_and_preserve_notes()` — 重新扫描前保存notes与其qualified_name的映射，然后删除files/functions/call_relations
+- `delete_scan_data_and_preserve_notes()` — 重新扫描前保存notes映射和已读状态，然后删除files/functions/call_relations，返回 (saved_notes, old_read_status)
 - `rebind_notes()` — 重新扫描后通过qualified_name查找新function_id，重新插入notes
+- `get_read_status_for_rebind()` — 获取项目函数的已读状态和代码体，返回 {qualified_name: (is_read, body)}
+- `restore_read_status()` — 重新扫描后，对qualified_name和body均未变的函数恢复is_read=1
 
 ### function_service.py
-- 分页查询使用子查询统计note_count、caller_count、callee_count
+- 分页查询使用子查询统计note_count、caller_count、callee_count，同时返回is_read状态
 - 详情中decorators从JSON字符串解析为list[str]
 - callers通过call_relations表的callee_id查询，callees通过caller_id查询(callee_id非NULL)
 

@@ -35,7 +35,7 @@ def get_function_list(
         SELECT
             f.id, f.name, f.qualified_name, f.signature,
             fi.rel_path AS file_path,
-            f.start_line, f.end_line, f.is_async, f.is_method, f.class_name,
+            f.start_line, f.end_line, f.is_async, f.is_method, f.class_name, f.is_read,
             (SELECT COUNT(*) FROM notes n WHERE n.function_id = f.id) AS note_count,
             (SELECT COUNT(*) FROM call_relations cr WHERE cr.callee_id = f.id) AS caller_count,
             (SELECT COUNT(*) FROM call_relations cr WHERE cr.caller_id = f.id AND cr.callee_id IS NOT NULL) AS callee_count
@@ -65,6 +65,7 @@ def get_function_list(
             note_count=row["note_count"],
             caller_count=row["caller_count"],
             callee_count=row["callee_count"],
+            is_read=bool(row["is_read"]),
         ))
 
     return FunctionListResponse(
@@ -120,6 +121,7 @@ def get_function_detail(conn: sqlite3.Connection, function_id: int) -> FunctionD
         body=row["body"],
         decorators=decorators,
         docstring=row["docstring"],
+        is_read=bool(row["is_read"]),
         callers=callers,
         callees=callees,
         notes=notes,

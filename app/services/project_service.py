@@ -60,14 +60,51 @@ def get_notes_for_rebind(conn: sqlite3.Connection, project_id: int) -> list[dict
     return rows
 
 
-def delete_scan_data_and_preserve_notes(conn: sqlite3.Connection, project_id: int) -> list[dict]:
-    """删除扫描数据并保留notes信息用于后续重新绑定
+def get_read_status_for_rebind(conn: sqlite3.Connection, project_id: int) -> dict[str, tuple[bool, str]]:
+    """获取项目函数的已读状态和代码体，用于重扫后恢复。
 
     Returns:
-        备注列表，每项含 qualified_name 用于重新绑定
+        {qualified_name: (is_read, body)}
+    """
+    rows = fetch_all(
+        conn,
+        "SELECT qualified_name, is_read, body FROM functions WHERE project_id = ?",
+        (project_id,),
+    )
+    return {row["qualified_name"]: (bool(row["is_read"]), row["body"]) for row in rows}
+
+
+def restore_read_status(
+    conn: sqlite3.Connection,
+    project_id: int,
+    old_status: dict[str, tuple[bool, str]],
+) -> None:
+    """重新扫描后，对 qualified_name 和 body 均未变的函数恢复 is_read=1"""
+    functions = fetch_all(
+        conn,
+        "SELECT id, qualified_name, body FROM functions WHERE project_id = ?",
+        (project_id,),
+    )
+    for func in functions:
+        qname: str = func["qualified_name"]
+        if qname in old_status:
+            old_is_read, old_body = old_status[qname]
+            if old_is_read and func["body"] == old_body:
+                execute(conn, "UPDATE functions SET is_read = 1 WHERE id = ?", (func["id"],))
+
+
+def delete_scan_data_and_preserve_notes(
+    conn: sqlite3.Connection, project_id: int
+) -> tuple[list[dict], dict[str, tuple[bool, str]]]:
+    """删除扫描数据并保留notes信息和已读状态用于后续重新绑定
+
+    Returns:
+        (saved_notes, old_read_status)
     """
     # 先获取notes和对应的qualified_name
     saved_notes = get_notes_for_rebind(conn, project_id)
+    # 获取已读状态
+    old_read_status = get_read_status_for_rebind(conn, project_id)
 
     # 删除call_relations
     execute(conn, "DELETE FROM call_relations WHERE project_id = ?", (project_id,))
@@ -78,7 +115,7 @@ def delete_scan_data_and_preserve_notes(conn: sqlite3.Connection, project_id: in
     # 删除files
     execute(conn, "DELETE FROM files WHERE project_id = ?", (project_id,))
 
-    return saved_notes
+    return saved_notes, old_read_status
 
 
 def rebind_notes(conn: sqlite3.Connection, project_id: int, saved_notes: list[dict]) -> None:

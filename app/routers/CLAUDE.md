@@ -20,11 +20,12 @@
 - `GET /` — 返回list[ProjectResponse]
 - `GET /{project_id}` — 返回ProjectResponse，不存在返回404
 - `DELETE /{project_id}` — 级联删除项目
-- `POST /{project_id}/rescan` — 重新扫描：保留notes通过qualified_name重新绑定
+- `POST /{project_id}/rescan` — 重新扫描：保留notes和已读状态，通过qualified_name重新绑定notes，通过qualified_name+body比较恢复已读状态
 
 ### functions.py
-- `GET /` — 分页列表(project_id必须, page, per_page)，按sort_order ASC排序，附带note/caller/callee计数
-- `GET /{function_id}` — 详情含decorators(JSON解析)、callers、callees、notes
+- `GET /` — 分页列表(project_id必须, page, per_page)，按sort_order ASC排序，附带note/caller/callee计数和is_read状态
+- `GET /{function_id}` — 详情含decorators(JSON解析)、is_read、callers、callees、notes
+- `PUT /{function_id}/read` — 标记函数为已读（设置is_read=1），不存在返回404
 - `GET /{function_id}/callers` — 返回list[FunctionBrief]
 - `GET /{function_id}/callees` — 返回list[FunctionBrief]
 

@@ -1,7 +1,7 @@
 """函数查询路由 — /api/v1/functions/"""
 from fastapi import APIRouter, HTTPException, Query
 
-from app.database import get_db
+from app.database import get_db, execute
 from app.models import FunctionListResponse, FunctionDetail, FunctionBrief
 from app.services.function_service import (
     get_function_list,
@@ -32,6 +32,16 @@ def get_function(function_id: int) -> FunctionDetail:
         if detail is None:
             raise HTTPException(status_code=404, detail="函数不存在")
         return detail
+
+
+@router.put("/{function_id}/read")
+def mark_function_read(function_id: int) -> dict[str, str]:
+    """标记函数为已读"""
+    with get_db() as conn:
+        affected = execute(conn, "UPDATE functions SET is_read = 1 WHERE id = ?", (function_id,))
+        if affected == 0:
+            raise HTTPException(status_code=404, detail="函数不存在")
+        return {"message": "ok"}
 
 
 @router.get("/{function_id}/callers", response_model=list[FunctionBrief])

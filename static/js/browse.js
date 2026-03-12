@@ -11,7 +11,7 @@ const Browse = {
     currentDetail: null,   // 当前函数详情缓存
     cache: new Map(),      // id -> detail 缓存
     filterHasNotes: false, // 是否筛选有备注的
-    readSet: new Set(),    // 已读函数ID集合
+    filterUnread: false,   // 是否只显示未读函数
     _saveTimer: null,      // 防抖保存定时器
 
     /**
@@ -22,9 +22,10 @@ const Browse = {
     async init(projectId, funcId) {
         this.projectId = projectId;
         this.cache.clear();
-        this.readSet.clear();
         this.filterHasNotes = false;
+        this.filterUnread = false;
         document.getElementById('filter-has-notes').checked = false;
+        document.getElementById('filter-unread').checked = false;
         this._bindEvents();
         await this._loadProject();
         await this.loadFunctionList();
@@ -36,9 +37,6 @@ const Browse = {
                 const progress = await API.getProgress(projectId);
                 if (progress.last_function_id) {
                     resumeFuncId = progress.last_function_id;
-                }
-                if (progress.read_function_ids) {
-                    this.readSet = new Set(progress.read_function_ids);
                 }
             } catch (_) { /* 忽略 */ }
         }
@@ -86,11 +84,14 @@ const Browse = {
 
     /** 应用筛选 */
     _applyFilter() {
+        let list = this.functions;
         if (this.filterHasNotes) {
-            this.filteredFunctions = this.functions.filter(f => f.has_notes || f.note_count > 0);
-        } else {
-            this.filteredFunctions = [...this.functions];
+            list = list.filter(f => f.has_notes || f.note_count > 0);
         }
+        if (this.filterUnread) {
+            list = list.filter(f => !f.is_read);
+        }
+        this.filteredFunctions = [...list];
     },
 
     /**
@@ -121,8 +122,12 @@ const Browse = {
         Notes.collapse();
         Notes.render(detail.notes, detail.id, this.projectId);
 
-        // 标记已读并保存进度
-        this.readSet.add(func.id);
+        // 标记已读
+        if (!func.is_read) {
+            func.is_read = true;  // 更新本地数据
+            if (detail) detail.is_read = true;
+            API.markRead(func.id).catch(() => {});  // 异步发送，不阻塞
+        }
         this._updateNav();
         this._debounceSaveProgress();
     },
@@ -141,11 +146,7 @@ const Browse = {
         const func = this.filteredFunctions[this.currentIndex];
         if (!func) return;
         try {
-            await API.saveProgress(
-                this.projectId,
-                func.id,
-                [...this.readSet]
-            );
+            await API.saveProgress(this.projectId, func.id);
         } catch (_) { /* 静默失败 */ }
     },
 
@@ -280,8 +281,9 @@ const Browse = {
     _updateNav() {
         const total = this.filteredFunctions.length;
         const current = total > 0 ? this.currentIndex + 1 : 0;
-        const readCount = this.filteredFunctions.filter(f => this.readSet.has(f.id)).length;
-        document.getElementById('nav-counter').textContent = `${current}/${total} (已读${readCount})`;
+        const unreadCount = this.functions.filter(f => !f.is_read).length;
+        document.getElementById('nav-counter').textContent =
+            `${current}/${total}` + (unreadCount > 0 ? ` (未读${unreadCount})` : '');
         document.getElementById('btn-prev').disabled = this.currentIndex <= 0;
         document.getElementById('btn-next').disabled = this.currentIndex >= total - 1;
     },
@@ -323,6 +325,27 @@ const Browse = {
             this._applyFilter();
             if (this.filteredFunctions.length > 0) {
                 // 尝试保持当前函数
+                if (this.currentDetail) {
+                    const idx = this.filteredFunctions.findIndex(f => f.id === this.currentDetail.id);
+                    if (idx >= 0) {
+                        this.showFunction(idx);
+                    } else {
+                        this.showFunction(0);
+                    }
+                } else {
+                    this.showFunction(0);
+                }
+            } else {
+                this._renderEmpty();
+            }
+            document.getElementById('browse-menu').style.display = 'none';
+        });
+
+        // 筛选未读函数
+        document.getElementById('filter-unread').addEventListener('change', (e) => {
+            this.filterUnread = e.target.checked;
+            this._applyFilter();
+            if (this.filteredFunctions.length > 0) {
                 if (this.currentDetail) {
                     const idx = this.filteredFunctions.findIndex(f => f.id === this.currentDetail.id);
                     if (idx >= 0) {

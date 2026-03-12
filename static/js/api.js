@@ -98,6 +98,11 @@ const API = {
         return this.request(`/functions/${id}`);
     },
 
+    /** 标记函数为已读 */
+    async markRead(functionId) {
+        return this.request(`/functions/${functionId}/read`, { method: 'PUT' });
+    },
+
     // ========== Notes ==========
 
     /** 添加备注 */
@@ -171,10 +176,9 @@ const API = {
     },
 
     /** 保存阅读进度 */
-    async saveProgress(projectId, lastFunctionId, readFunctionIds) {
+    async saveProgress(projectId, lastFunctionId) {
         const body = {};
         if (lastFunctionId != null) body.last_function_id = lastFunctionId;
-        if (readFunctionIds != null) body.read_function_ids = readFunctionIds;
         return this.request(`/progress/?project_id=${projectId}`, {
             method: 'PUT',
             body: JSON.stringify(body),
