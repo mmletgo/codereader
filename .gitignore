@@ -7,3 +7,4 @@ venv/
 config.toml
 .DS_Store
 .vscode/
+data/
