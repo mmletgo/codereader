@@ -6,12 +6,14 @@
 ## 技术栈
 - 后端: FastAPI + uvicorn + SQLite (标准库sqlite3)
 - 代码分析: Python ast 模块
+- AI: Anthropic Claude API (anthropic SDK)
 - 前端: 纯HTML/CSS/JS + highlight.js(代码高亮) + D3.js(调用关系图)
 - 第三方JS库: 本地存储在 static/lib/
 
 ## 目录结构
 - `main.py` — 应用入口，FastAPI实例创建，路由注册，静态文件挂载
-- `config.py` — 配置常量（端口、数据库路径、分析默认规则）
+- `config.py` — 配置加载（从config.toml读取，缺省用默认值）
+- `config.example.toml` — 配置模板（复制为config.toml使用，config.toml被git忽略）
 - `app/` — FastAPI应用（路由、服务、数据库、模型）
 - `analyzer/` — Python代码分析引擎（AST解析、调用关系解析）
 - `static/` — 前端静态文件（HTML/CSS/JS）
@@ -25,6 +27,7 @@
 3. **调用关系图**: D3.js横向树状图，展示函数调用关系，节点可点击跳转
 4. **阅后备注**: 为每个函数添加备注（类型：general/bug/todo/refactor/question），持久化存储
 5. **导出**: 一键导出项目所有阅后记录（JSON/Markdown），面向AI优化的结构化格式
+6. **AI辅助阅读**: 函数级AI解读（可折叠面板，带缓存和预加载）、行级代码解释（每行右侧?按钮）、AI自动备注生成
 
 ## 数据流
 用户指定目录 → scanner扫描文件 → python_analyzer提取函数+调用 → call_resolver解析调用关系 → engine存入SQLite → API提供数据 → 前端渲染
@@ -46,3 +49,6 @@ python main.py
 - 重新扫描时通过qualified_name保留并重新绑定用户备注
 - 前端路由使用hash模式（#/project/{id}/browse 等），支持 ?func={id} 参数直接跳转函数
 - 导出格式面向AI优化：JSON包含函数签名+代码+调用关系+备注的完整上下文
+- AI解读缓存：按函数体SHA256哈希判断失效，函数未变则复用缓存，变了则重新生成
+- AI配置：config.toml的[ai]段配置base_url/api_key/model，支持自定义代理网关
+- 配置管理：config.toml（实际配置，gitignored）+ config.example.toml（模板，git跟踪）

@@ -1,0 +1,20 @@
+# CodeReader 配置文件
+# 复制本文件为 config.toml 并修改配置项
+
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[analysis]
+include = ["*.py"]
+exclude = [
+    "__pycache__", ".git", ".venv", "venv", "env",
+    "node_modules", ".tox", ".mypy_cache", ".pytest_cache",
+    "*.pyc", "*.pyo", ".eggs", "*.egg-info",
+    "dist", "build", ".hg", ".svn",
+]
+
+[ai]
+base_url = "https://api.anthropic.com"
+api_key = ""
+model = "claude-sonnet-4-20250514"
