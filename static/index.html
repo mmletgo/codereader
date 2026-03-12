@@ -2,12 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CodeReader</title>
     <link rel="stylesheet" href="lib/atom-one-dark.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/code.css">
     <link rel="stylesheet" href="css/graph.css?v=2">
+    <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
     <!-- 视图1: 项目列表页 -->
@@ -59,53 +60,63 @@
                 <button class="dropdown-item dropdown-btn" id="btn-rescan">刷新代码</button>
             </div>
         </header>
-        <div class="browse-info" id="browse-info">
-            <div class="func-qualified-name" id="func-qualified-name"></div>
-            <div class="func-file-info" id="func-file-info"></div>
-        </div>
-        <div class="browse-code" id="browse-code">
-            <pre><code id="code-block" class="language-python"></code></pre>
-        </div>
-        <div class="ai-panel" id="ai-panel">
-            <div class="ai-toggle" id="ai-toggle">
-                <span class="ai-toggle-arrow">&#9660;</span>
-                <span id="ai-toggle-text">AI解读</span>
-                <button class="ai-refresh-btn" id="ai-refresh-btn" title="重新生成">&#8635;</button>
-            </div>
-            <div class="ai-panel-body" id="ai-panel-body" style="display:none;">
-                <div class="ai-explanation-body" id="ai-explanation-body">
-                    <div class="ai-loading">点击展开获取AI解读</div>
+        <div class="browse-layout">
+            <aside class="browse-sidebar" id="browse-sidebar">
+                <div class="sidebar-search">
+                    <input type="text" id="sidebar-search" class="input" placeholder="搜索函数...">
                 </div>
-            </div>
-        </div>
-        <div class="browse-nav" id="browse-nav">
-            <button class="nav-btn" id="btn-prev" title="上一个函数">&laquo;</button>
-            <span class="nav-counter" id="nav-counter">0/0</span>
-            <button class="nav-btn" id="btn-next" title="下一个函数">&raquo;</button>
-            <div class="nav-spacer"></div>
-            <button class="nav-btn nav-btn-icon" id="btn-goto-graph" title="调用关系图">&#128436;</button>
-            <button class="nav-btn nav-btn-icon" id="btn-goto-list" title="函数列表">&#9776;</button>
-            <button class="nav-btn nav-btn-icon" id="btn-goto-export" title="导出">&#128190;</button>
-        </div>
-        <div class="notes-panel" id="notes-panel">
-            <button class="notes-toggle" id="notes-toggle">
-                <span class="notes-toggle-arrow">&#9650;</span>
-                <span id="notes-toggle-text">备注(0)</span>
-            </button>
-            <div class="notes-body" id="notes-body" style="display:none;">
-                <div class="notes-form">
-                    <select id="note-type-select" class="input note-type-select">
-                        <option value="general">通用</option>
-                        <option value="bug">Bug</option>
-                        <option value="todo">TODO</option>
-                        <option value="refactor">重构</option>
-                        <option value="question">疑问</option>
-                    </select>
-                    <input type="text" id="note-input" class="input note-input" placeholder="输入备注...">
-                    <button id="btn-add-note" class="btn btn-primary btn-sm">保存</button>
-                    <button id="btn-ai-notes" class="btn btn-ai-notes btn-sm">AI备注</button>
+                <div class="sidebar-list" id="sidebar-func-list"></div>
+            </aside>
+            <div class="browse-main">
+                <div class="browse-info" id="browse-info">
+                    <div class="func-qualified-name" id="func-qualified-name"></div>
+                    <div class="func-file-info" id="func-file-info"></div>
                 </div>
-                <div id="notes-list" class="notes-list"></div>
+                <div class="browse-code" id="browse-code">
+                    <pre><code id="code-block" class="language-python"></code></pre>
+                </div>
+                <div class="ai-panel" id="ai-panel">
+                    <div class="ai-toggle" id="ai-toggle">
+                        <span class="ai-toggle-arrow">&#9660;</span>
+                        <span id="ai-toggle-text">AI解读</span>
+                        <button class="ai-refresh-btn" id="ai-refresh-btn" title="重新生成">&#8635;</button>
+                    </div>
+                    <div class="ai-panel-body" id="ai-panel-body" style="display:none;">
+                        <div class="ai-explanation-body" id="ai-explanation-body">
+                            <div class="ai-loading">点击展开获取AI解读</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="browse-nav" id="browse-nav">
+                    <button class="nav-btn" id="btn-prev" title="上一个函数">&laquo;</button>
+                    <span class="nav-counter" id="nav-counter">0/0</span>
+                    <button class="nav-btn" id="btn-next" title="下一个函数">&raquo;</button>
+                    <div class="nav-spacer"></div>
+                    <button class="nav-btn nav-btn-icon" id="btn-goto-graph" title="调用关系图">&#128436;</button>
+                    <button class="nav-btn nav-btn-icon" id="btn-goto-list" title="函数列表">&#9776;</button>
+                    <button class="nav-btn nav-btn-icon" id="btn-goto-export" title="导出">&#128190;</button>
+                </div>
+                <div class="notes-panel" id="notes-panel">
+                    <button class="notes-toggle" id="notes-toggle">
+                        <span class="notes-toggle-arrow">&#9650;</span>
+                        <span id="notes-toggle-text">备注(0)</span>
+                    </button>
+                    <div class="notes-body" id="notes-body" style="display:none;">
+                        <div class="notes-form">
+                            <select id="note-type-select" class="input note-type-select">
+                                <option value="general">通用</option>
+                                <option value="bug">Bug</option>
+                                <option value="todo">TODO</option>
+                                <option value="refactor">重构</option>
+                                <option value="question">疑问</option>
+                            </select>
+                            <input type="text" id="note-input" class="input note-input" placeholder="输入备注...">
+                            <button id="btn-add-note" class="btn btn-primary btn-sm">保存</button>
+                            <button id="btn-ai-notes" class="btn btn-ai-notes btn-sm">AI备注</button>
+                        </div>
+                        <div id="notes-list" class="notes-list"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>

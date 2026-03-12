@@ -1,0 +1,283 @@
+/* ========== PC Responsive Styles (≥1024px) ========== */
+
+/* -- Mobile defaults for new wrappers -- */
+.browse-layout,
+.browse-main {
+    display: contents;
+}
+
+.browse-sidebar {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    /* ========== General ========== */
+    :root {
+        --top-bar-h: 52px;
+    }
+
+    /* Wider scrollbar on PC */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--text-secondary);
+    }
+
+    /* ========== Top Bar ========== */
+    .top-bar {
+        padding: 0 20px;
+        gap: 12px;
+    }
+
+    .top-bar-title {
+        font-size: 18px;
+    }
+
+    /* ========== Hover effects (PC only) ========== */
+    .project-card:hover {
+        border-color: var(--accent);
+        background: var(--bg-tertiary);
+    }
+
+    .top-bar-back:hover {
+        background: var(--bg-tertiary);
+        border-radius: var(--radius);
+    }
+
+    .top-bar-menu:hover {
+        color: var(--text-primary);
+        background: var(--bg-tertiary);
+        border-radius: var(--radius);
+    }
+
+    .nav-btn:hover:not(:disabled) {
+        background: var(--accent);
+        color: #fff;
+    }
+
+    .btn:hover {
+        opacity: 0.85;
+    }
+
+    .btn-primary:hover {
+        opacity: 1;
+        filter: brightness(1.1);
+    }
+
+    .dropdown-item:hover {
+        background: var(--bg-secondary);
+    }
+
+    .note-delete:hover {
+        color: var(--accent-danger);
+    }
+
+    .project-card-delete:hover {
+        color: var(--accent-danger);
+        background: rgba(248, 81, 73, 0.1);
+    }
+
+    .list-func-item:hover {
+        background: var(--bg-secondary);
+    }
+
+    .fab:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(97, 175, 239, 0.4);
+    }
+
+    /* ========== Project List: Grid ========== */
+    .projects-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+    }
+
+    .view-body {
+        padding: 24px 32px;
+    }
+
+    /* ========== Browse Layout: Sidebar ========== */
+    .browse-layout {
+        display: flex;
+        flex-direction: row;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .browse-sidebar {
+        display: flex;
+        flex-direction: column;
+        width: 280px;
+        min-width: 280px;
+        background: var(--bg-secondary);
+        border-right: 1px solid var(--border);
+        overflow: hidden;
+    }
+
+    .browse-main {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    /* -- Sidebar search -- */
+    .sidebar-search {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-search .input {
+        height: 36px;
+        font-size: 13px;
+    }
+
+    /* -- Sidebar function list -- */
+    .sidebar-list {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .sidebar-func-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-primary);
+        transition: background 0.1s;
+    }
+
+    .sidebar-func-item:hover {
+        background: var(--bg-tertiary);
+    }
+
+    .sidebar-func-item.active {
+        background: rgba(97, 175, 239, 0.15);
+        border-left: 3px solid var(--accent);
+        padding-left: 9px;
+    }
+
+    .sidebar-func-item.read {
+        color: var(--text-secondary);
+    }
+
+    .sidebar-func-name {
+        flex: 1;
+        font-family: var(--font-code);
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sidebar-func-badge {
+        font-size: 10px;
+        padding: 1px 5px;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+
+    .sidebar-func-badge.unread {
+        background: var(--accent);
+        color: #fff;
+    }
+
+    .sidebar-func-badge.has-notes {
+        background: var(--accent-danger);
+        color: #fff;
+    }
+
+    /* -- Sidebar file group headers -- */
+    .sidebar-file-header {
+        padding: 6px 12px;
+        font-size: 11px;
+        color: var(--text-secondary);
+        font-family: var(--font-code);
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ========== Browse Info: wider padding ========== */
+    .browse-info {
+        padding: 12px 24px;
+    }
+
+    /* ========== Browse Code: wider padding ========== */
+    .browse-code code {
+        font-size: 14px;
+    }
+
+    /* ========== Notes/AI panels: better sizing ========== */
+    .notes-body {
+        max-height: 30vh;
+    }
+
+    .ai-panel-body {
+        max-height: 30vh;
+    }
+
+    /* ========== Bottom nav: keep but adjust ========== */
+    .browse-nav {
+        padding: 0 16px;
+    }
+
+    /* ========== List view ========== */
+    .list-search-bar {
+        padding: 12px 24px;
+    }
+
+    .list-func-item {
+        padding: 12px 24px;
+    }
+
+    .list-file-header {
+        padding: 8px 24px;
+    }
+
+    /* ========== Export view ========== */
+    .export-body {
+        padding: 24px 32px;
+        max-width: 1200px;
+    }
+
+    /* ========== Dialog: larger on PC ========== */
+    .dialog {
+        max-width: 500px;
+        padding: 32px;
+    }
+}
+
+/* ========== Extra wide screens (≥1440px) ========== */
+@media (min-width: 1440px) {
+    .browse-sidebar {
+        width: 320px;
+        min-width: 320px;
+    }
+
+    .projects-list {
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    }
+
+    .browse-code code {
+        font-size: 15px;
+    }
+}

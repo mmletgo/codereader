@@ -107,6 +107,7 @@ const Browse = {
             list = list.filter(f => !f.is_read);
         }
         this.filteredFunctions = [...list];
+        this._renderSidebar();
     },
 
     /**
@@ -164,6 +165,7 @@ const Browse = {
             API.markRead(func.id).catch(() => {});
         }
         this._updateNav();
+        this._updateSidebarActive();
         this._debounceSaveProgress();
 
         // 预加载相邻函数
@@ -361,6 +363,61 @@ const Browse = {
     _bindEvents() {
         if (this._bound) return;
         this._bound = true;
+
+        // 侧边栏函数点击 - 事件委托
+        const sidebarList = document.getElementById('sidebar-func-list');
+        if (sidebarList) {
+            sidebarList.addEventListener('click', (e) => {
+                const item = e.target.closest('.sidebar-func-item');
+                if (!item) return;
+                const funcId = parseInt(item.dataset.funcId);
+                const idx = this.filteredFunctions.findIndex(f => f.id === funcId);
+                if (idx >= 0) {
+                    this.showFunction(idx);
+                }
+            });
+        }
+
+        // 侧边栏搜索
+        const sidebarSearch = document.getElementById('sidebar-search');
+        if (sidebarSearch) {
+            let searchTimer = null;
+            sidebarSearch.addEventListener('input', () => {
+                if (searchTimer) clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    const query = sidebarSearch.value.trim().toLowerCase();
+                    const items = document.querySelectorAll('#sidebar-func-list .sidebar-func-item');
+                    const headers = document.querySelectorAll('#sidebar-func-list .sidebar-file-header');
+
+                    if (!query) {
+                        // 显示全部
+                        items.forEach(el => el.style.display = '');
+                        headers.forEach(el => el.style.display = '');
+                        return;
+                    }
+
+                    // 隐藏不匹配的
+                    const visibleFiles = new Set();
+                    items.forEach(el => {
+                        const name = el.querySelector('.sidebar-func-name');
+                        const fullName = name ? name.getAttribute('title').toLowerCase() : '';
+                        const matches = fullName.includes(query);
+                        el.style.display = matches ? '' : 'none';
+                        if (matches) {
+                            // 找到所属文件头
+                            let prev = el.previousElementSibling;
+                            while (prev && !prev.classList.contains('sidebar-file-header')) {
+                                prev = prev.previousElementSibling;
+                            }
+                            if (prev) visibleFiles.add(prev);
+                        }
+                    });
+                    headers.forEach(el => {
+                        el.style.display = visibleFiles.has(el) ? '' : 'none';
+                    });
+                }, 200); // 200ms debounce
+            });
+        }
 
         document.getElementById('btn-prev').addEventListener('click', () => this.prev());
         document.getElementById('btn-next').addEventListener('click', () => this.next());
@@ -577,6 +634,85 @@ const Browse = {
             document.getElementById('code-block').textContent = '刷新失败: ' + err.message;
         } finally {
             overlay.style.display = 'none';
+        }
+    },
+
+    /** 渲染侧边栏函数列表（按文件分组） */
+    _renderSidebar() {
+        const listEl = document.getElementById('sidebar-func-list');
+        if (!listEl) return;
+
+        const funcs = this.filteredFunctions;
+        if (funcs.length === 0) {
+            listEl.innerHTML = '<div style="padding:16px;color:var(--text-secondary);font-size:13px;">暂无函数</div>';
+            return;
+        }
+
+        // 按文件分组
+        const groups = new Map();
+        for (const f of funcs) {
+            const file = f.file_path || '未知文件';
+            if (!groups.has(file)) groups.set(file, []);
+            groups.get(file).push(f);
+        }
+
+        let html = '';
+        for (const [file, items] of groups) {
+            // 只显示文件名最后两级路径
+            const shortPath = file.split('/').slice(-2).join('/');
+            html += `<div class="sidebar-file-header" title="${this._escapeHtml(file)}">${this._escapeHtml(shortPath)}</div>`;
+            for (const f of items) {
+                const isActive = this.currentDetail && this.currentDetail.id === f.id;
+                const isRead = f.is_read;
+                const hasNotes = f.has_notes || f.note_count > 0;
+
+                // 只显示简短函数名（不含模块前缀）
+                const shortName = f.qualified_name.includes('.')
+                    ? f.qualified_name.split('.').slice(-1)[0]
+                    : f.qualified_name;
+
+                let badges = '';
+                if (!isRead) badges += '<span class="sidebar-func-badge unread">新</span>';
+                if (hasNotes) badges += '<span class="sidebar-func-badge has-notes">备注</span>';
+
+                html += `<div class="sidebar-func-item${isActive ? ' active' : ''}${isRead ? ' read' : ''}" data-func-id="${f.id}">
+                    <span class="sidebar-func-name" title="${this._escapeHtml(f.qualified_name)}">${this._escapeHtml(shortName)}</span>
+                    ${badges}
+                </div>`;
+            }
+        }
+        listEl.innerHTML = html;
+    },
+
+    /** 更新侧边栏中的active状态（不重新渲染整个列表） */
+    _updateSidebarActive() {
+        const listEl = document.getElementById('sidebar-func-list');
+        if (!listEl) return;
+
+        const items = listEl.querySelectorAll('.sidebar-func-item');
+        const currentId = this.currentDetail ? this.currentDetail.id : null;
+
+        for (const item of items) {
+            const funcId = parseInt(item.dataset.funcId);
+            if (funcId === currentId) {
+                item.classList.add('active');
+                // 滚动到可见区域
+                item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            } else {
+                item.classList.remove('active');
+            }
+        }
+
+        // 同时更新已读状态
+        const func = this.filteredFunctions[this.currentIndex];
+        if (func && func.is_read) {
+            const item = listEl.querySelector(`.sidebar-func-item[data-func-id="${func.id}"]`);
+            if (item && !item.classList.contains('read')) {
+                item.classList.add('read');
+                // 移除未读标记
+                const unreadBadge = item.querySelector('.sidebar-func-badge.unread');
+                if (unreadBadge) unreadBadge.remove();
+            }
         }
     },
 

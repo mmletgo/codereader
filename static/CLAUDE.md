@@ -5,6 +5,7 @@
 - `css/main.css` — 主样式（暗色主题变量、flex布局、触控44px最小高度、响应式组件）
 - `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖、行级调用按钮和展开区样式、骨架屏shimmer动画）
 - `css/graph.css` — D3调用关系图节点/连线/缩放样式
+- `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar；≥1440px断点：更宽侧边栏、更大字体）
 - `js/app.js` — 应用入口，hash路由管理（5条路由规则），项目列表页渲染和创建/删除逻辑
 - `js/api.js` — API请求封装（统一fetch wrapper，自动分页加载getAllFunctions，markRead标记已读）
 - `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载）
@@ -27,6 +28,14 @@
 - `#/project/{id}/graph` — 调用关系图（view-graph），D3横向树
 - `#/project/{id}/list` — 函数列表（view-list），搜索+按文件分组
 - `#/project/{id}/export` — 导出（view-export），JSON/Markdown预览+下载
+
+## PC端适配（responsive.css）
+- 浏览视图HTML结构：browse-layout(flex row) > browse-sidebar(aside) + browse-main
+- 移动端：browse-layout和browse-main用display:contents透传布局，browse-sidebar用display:none隐藏
+- PC端（≥1024px）：左侧280px侧边栏显示函数列表（搜索+按文件分组+当前高亮），右侧主区域显示代码
+- 超宽屏（≥1440px）：侧边栏扩展到320px
+- 项目列表页：PC端使用CSS Grid网格布局替代移动端的单列列表
+- hover效果：仅在PC端media query中定义，避免影响触控设备
 
 ## 移动端交互设计
 - 函数浏览：底部导航栏左右箭头按钮切换函数，上下滚动查看代码
