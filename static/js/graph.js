@@ -9,8 +9,9 @@ const Graph = {
      * 初始化调用关系图
      * @param {number} projectId
      */
-    async init(projectId) {
+    async init(projectId, currentFuncId) {
         this.projectId = projectId;
+        this.currentFuncId = currentFuncId || null;
         this._bindEvents();
 
         const container = document.getElementById('graph-container');
@@ -148,6 +149,7 @@ const Graph = {
 
         // 绘制节点
         const projectId = this.projectId;
+        const currentFuncId = this.currentFuncId;
         const nodeGroup = g.selectAll('.graph-node')
             .data(root.descendants())
             .enter()
@@ -155,6 +157,9 @@ const Graph = {
             .attr('class', d => {
                 let cls = 'graph-node';
                 if (d.data.virtual) cls += ' virtual';
+                else if (d.data.id === currentFuncId) cls += ' current';
+                else if (d.data.is_read) cls += ' read';
+                else cls += ' unread';
                 if (d.data.has_notes) cls += ' has-notes';
                 return cls;
             })

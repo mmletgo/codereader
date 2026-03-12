@@ -43,7 +43,7 @@ def get_call_graph(
             conn,
             f"""
             SELECT f.id, f.name, f.qualified_name, fi.rel_path AS file_path,
-                   f.class_name,
+                   f.class_name, f.is_read,
                    (SELECT COUNT(*) FROM notes n WHERE n.function_id = f.id) AS note_count
             FROM functions f
             JOIN files fi ON f.file_id = fi.id
@@ -63,6 +63,7 @@ def get_call_graph(
                 file=row["file_path"],
                 group=group,
                 has_notes=row["note_count"] > 0,
+                is_read=bool(row["is_read"]),
             ))
 
         return CallGraphData(nodes=nodes, links=links)

@@ -13,21 +13,42 @@
 }
 
 /* ========== Graph Nodes ========== */
+/* 未读函数：默认灰色 */
 .graph-node circle {
     fill: var(--bg-tertiary);
-    stroke: var(--accent);
+    stroke: var(--text-secondary);
     stroke-width: 2;
     cursor: pointer;
-    transition: fill 0.15s;
+    transition: fill 0.15s, stroke 0.15s;
 }
 
 .graph-node circle:hover {
     fill: var(--accent);
 }
 
+/* 已读函数：绿色 */
+.graph-node.read circle {
+    fill: var(--accent-success);
+    stroke: var(--accent-success);
+}
+
+/* 当前正在阅读的函数：蓝色高亮+更大圆圈 */
+.graph-node.current circle {
+    fill: var(--accent);
+    stroke: var(--accent);
+    r: 7;
+    filter: drop-shadow(0 0 4px var(--accent));
+}
+
+.graph-node.current text {
+    fill: var(--accent);
+    font-weight: bold;
+}
+
+/* 有备注的节点：红色边框（叠加在读/未读状态之上） */
 .graph-node.has-notes circle {
-    fill: #e94560;
     stroke: #e94560;
+    stroke-width: 3;
 }
 
 .graph-node.virtual circle {

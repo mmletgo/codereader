@@ -133,6 +133,7 @@ class GraphNode(BaseModel):
     file: str
     group: str
     has_notes: bool = False
+    is_read: bool = False
 
 
 class GraphLink(BaseModel):

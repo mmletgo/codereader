@@ -204,15 +204,16 @@ def compute_sort_order(conn: sqlite3.Connection, project_id: int) -> None:
 
     func_ids: set[int] = {f["id"] for f in functions}
 
-    # 获取所有调用关系（仅项目内部的，即 callee_id 不为 NULL）
+    # 获取所有调用关系（仅项目内部的，即 callee_id 不为 NULL），按调用行号排序
     relations: list[dict] = fetch_all(
         conn,
-        "SELECT caller_id, callee_id FROM call_relations "
-        "WHERE project_id = ? AND callee_id IS NOT NULL",
+        "SELECT caller_id, callee_id, call_line FROM call_relations "
+        "WHERE project_id = ? AND callee_id IS NOT NULL "
+        "ORDER BY caller_id, call_line",
         (project_id,),
     )
 
-    # 构建调用图和被调用集
+    # 构建调用图和被调用集，callee按代码中出现顺序排列（去重保留首次出现）
     call_graph: dict[int, list[int]] = defaultdict(list)
     callee_set: set[int] = set()
 
@@ -220,13 +221,22 @@ def compute_sort_order(conn: sqlite3.Connection, project_id: int) -> None:
         caller_id: int = rel["caller_id"]
         callee_id: int = rel["callee_id"]
         if caller_id in func_ids and callee_id in func_ids:
-            call_graph[caller_id].append(callee_id)
+            # 同一caller对同一callee只保留首次调用（避免重复遍历）
+            if callee_id not in call_graph[caller_id]:
+                call_graph[caller_id].append(callee_id)
             callee_set.add(callee_id)
 
-    # 找入口函数（无被调用者的函数）
-    entry_funcs: list[int] = [fid for fid in func_ids if fid not in callee_set]
-    # 按 ID 排序保证稳定性
-    entry_funcs.sort()
+    # 找入口函数（无被调用者的函数），按文件路径+行号排序
+    entry_func_set: set[int] = {fid for fid in func_ids if fid not in callee_set}
+    entry_funcs_rows: list[dict] = fetch_all(
+        conn,
+        "SELECT f.id FROM functions f "
+        "JOIN files fl ON f.file_id = fl.id "
+        "WHERE f.project_id = ? "
+        "ORDER BY fl.rel_path, f.start_line",
+        (project_id,),
+    )
+    entry_funcs: list[int] = [r["id"] for r in entry_funcs_rows if r["id"] in entry_func_set]
 
     # DFS 遍历
     visited: set[int] = set()

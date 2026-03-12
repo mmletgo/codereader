@@ -43,7 +43,8 @@ const App = {
         if (graphMatch) {
             const projectId = parseInt(graphMatch[1]);
             this._showView('view-graph');
-            Graph.init(projectId);
+            const currentFuncId = Browse.currentDetail ? Browse.currentDetail.id : null;
+            Graph.init(projectId, currentFuncId);
             return;
         }
 
