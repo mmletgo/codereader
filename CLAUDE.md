@@ -1,0 +1,33 @@
+# CodeReader - 移动端代码阅读器
+
+## 项目概述
+移动端Web应用，分析Python代码库的函数调用关系，提供左右切换函数浏览、阅后备注、一键导出等功能。
+
+## 技术栈
+- 后端: FastAPI + uvicorn + SQLite (标准库sqlite3)
+- 代码分析: Python ast 模块
+- 前端: 纯HTML/CSS/JS + highlight.js(代码高亮) + D3.js(调用关系图)
+- 第三方JS库: 本地存储在 static/lib/
+
+## 目录结构
+- `main.py` — 应用入口，FastAPI实例创建，路由注册，静态文件挂载
+- `config.py` — 配置常量（端口、数据库路径、分析默认规则）
+- `app/` — FastAPI应用（路由、服务、数据库、模型）
+- `analyzer/` — Python代码分析引擎（AST解析、调用关系解析）
+- `static/` — 前端静态文件（HTML/CSS/JS）
+- `data/` — 运行时数据（SQLite数据库文件）
+- `tests/` — 测试代码
+- `docs/` — 项目文档
+
+## 核心功能
+1. **项目扫描**: 指定目录路径，递归扫描Python文件，提取所有函数定义和调用关系
+2. **函数浏览**: 按调用关系排序，左右切换函数，上下滚动查看代码（语法高亮）
+3. **调用关系图**: D3.js横向树状图，展示函数调用关系，节点可点击跳转
+4. **阅后备注**: 为每个函数添加备注（类型：general/bug/todo/refactor/question），持久化存储
+5. **导出**: 一键导出项目所有阅后记录（JSON/Markdown），面向AI优化的结构化格式
+
+## 数据流
+用户指定目录 → scanner扫描文件 → python_analyzer提取函数+调用 → call_resolver解析调用关系 → engine存入SQLite → API提供数据 → 前端渲染
+
+## 函数浏览排序逻辑
+默认按调用关系排序：找到入口函数（无调用者），DFS遍历调用链，赋予sort_order值。未被调用链覆盖的函数按文件路径+行号追加。
