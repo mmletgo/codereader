@@ -8,6 +8,7 @@ PORT: int = 8080
 # 数据目录
 DATA_DIR: Path = Path(__file__).parent / "data"
 DB_PATH: Path = DATA_DIR / "codereader.db"
+EXPORT_DIR: Path = DATA_DIR / "exports"
 
 # 静态文件目录
 STATIC_DIR: Path = Path(__file__).parent / "static"

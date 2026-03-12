@@ -60,8 +60,8 @@ const Export = {
         document.getElementById('btn-format-md').classList.toggle('active', this.currentFormat === 'markdown');
     },
 
-    /** 下载文件 */
-    _download() {
+    /** 下载文件（同时保存到服务端） */
+    async _download() {
         const content = this.cachedData[this.currentFormat];
         if (!content) {
             alert('暂无内容可下载');
@@ -73,6 +73,7 @@ const Export = {
         const ext = isJson ? 'json' : 'md';
         const filename = `codereader-export.${ext}`;
 
+        // 客户端下载
         const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -80,6 +81,23 @@ const Export = {
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
+
+        // 同步保存到服务端
+        try {
+            await API.saveExport(this.projectId, this.currentFormat);
+        } catch (_) { /* 静默 */ }
+    },
+
+    /** 清空项目所有备注 */
+    async _clearNotes() {
+        if (!confirm('确定清空该项目的所有备注？此操作不可恢复。')) return;
+        try {
+            await API.clearProjectNotes(this.projectId);
+            this.cachedData = {};
+            await this._loadPreview();
+        } catch (err) {
+            alert('清空失败: ' + err.message);
+        }
     },
 
     /** 绑定事件 */
@@ -101,6 +119,10 @@ const Export = {
 
         document.getElementById('btn-download').addEventListener('click', () => {
             this._download();
+        });
+
+        document.getElementById('btn-clear-notes').addEventListener('click', () => {
+            this._clearNotes();
         });
     },
 };

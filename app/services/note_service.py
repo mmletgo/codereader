@@ -55,6 +55,11 @@ def delete_note(conn: sqlite3.Connection, note_id: int) -> bool:
     return affected > 0
 
 
+def clear_project_notes(conn: sqlite3.Connection, project_id: int) -> int:
+    """清空项目的所有备注，返回删除数量"""
+    return execute(conn, "DELETE FROM notes WHERE project_id = ?", (project_id,))
+
+
 def get_notes(
     conn: sqlite3.Connection,
     function_id: int | None = None,

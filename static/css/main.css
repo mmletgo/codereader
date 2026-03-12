@@ -714,6 +714,11 @@ html, body {
     line-height: 1.5;
 }
 
+.export-actions {
+    display: flex;
+    gap: 8px;
+}
+
 /* ========== Loading Overlay ========== */
 .loading-overlay {
     position: fixed;

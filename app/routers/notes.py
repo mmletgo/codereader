@@ -8,6 +8,7 @@ from app.services.note_service import (
     update_note,
     delete_note,
     get_notes,
+    clear_project_notes,
 )
 
 router = APIRouter()
@@ -18,6 +19,16 @@ def add_note(data: NoteCreate) -> NoteResponse:
     """创建备注"""
     with get_db() as conn:
         return create_note(conn, data)
+
+
+@router.delete("/clear")
+def clear_notes(
+    project_id: int = Query(..., description="项目ID"),
+) -> dict[str, str | int]:
+    """清空项目的所有备注"""
+    with get_db() as conn:
+        count = clear_project_notes(conn, project_id)
+        return {"message": f"已删除 {count} 条备注", "deleted": count}
 
 
 @router.put("/{note_id}", response_model=NoteResponse)

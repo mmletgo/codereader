@@ -151,6 +151,18 @@ const API = {
         return this.request(`/export/?project_id=${projectId}&format=${format}`);
     },
 
+    /** 导出并保存到服务端 */
+    async saveExport(projectId, format = 'json') {
+        return this.request(`/export/save?project_id=${projectId}&format=${format}`, {
+            method: 'POST',
+        });
+    },
+
+    /** 清空项目所有备注 */
+    async clearProjectNotes(projectId) {
+        return this.request(`/notes/clear?project_id=${projectId}`, { method: 'DELETE' });
+    },
+
     /** 获取导出文本（Markdown格式，不做JSON解析） */
     async getExportText(projectId) {
         const url = `${this.BASE}/export/?project_id=${projectId}&format=markdown`;

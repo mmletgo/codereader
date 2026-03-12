@@ -1,7 +1,9 @@
 """导出服务 — 组装有备注的函数数据，支持JSON和Markdown格式"""
+import json
 import sqlite3
 from datetime import datetime
 
+from config import EXPORT_DIR
 from app.database import fetch_one, fetch_all
 from app.models import ExportData, ExportFunction, ExportNote
 
@@ -98,6 +100,24 @@ def get_export_data(conn: sqlite3.Connection, project_id: int) -> ExportData | N
         summary=summary,
         functions=export_functions,
     )
+
+
+def save_export_file(data: ExportData, fmt: str) -> str:
+    """将导出数据保存到服务端文件，返回文件路径"""
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_name = data.project.replace("/", "_").replace(" ", "_")
+
+    if fmt == "markdown":
+        filename = f"{safe_name}_{timestamp}.md"
+        content = render_markdown(data)
+    else:
+        filename = f"{safe_name}_{timestamp}.json"
+        content = json.dumps(data.model_dump(), ensure_ascii=False, indent=2)
+
+    filepath = EXPORT_DIR / filename
+    filepath.write_text(content, encoding="utf-8")
+    return str(filepath)
 
 
 def render_markdown(data: ExportData) -> str:
