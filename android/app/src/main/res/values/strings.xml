@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CodeReader</string>
+    <string name="server_url_title">服务器地址</string>
+    <string name="server_url_hint">例如: http://192.168.1.100:8080</string>
+    <string name="btn_ok">确定</string>
+    <string name="btn_cancel">取消</string>
+    <string name="btn_change_server">修改服务器</string>
+</resources>

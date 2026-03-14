@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from config import HOST, PORT, STATIC_DIR
@@ -18,6 +19,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="CodeReader", version="1.0.0", lifespan=lifespan)
+
+# CORS（Android WebView 跨域请求）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://appassets.androidplatform.net"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # API 路由
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["projects"])

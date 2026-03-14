@@ -262,6 +262,7 @@ const App = {
 
     /** 注册 Service Worker */
     _registerSW() {
+        if (window.CodeReaderAndroid) return;
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(err => {
                 console.warn('SW注册失败:', err);
@@ -271,6 +272,7 @@ const App = {
 
     /** PWA安装引导 */
     _initPWAInstall() {
+        if (window.CodeReaderAndroid) return;
         // 如果已在PWA模式或已忽略，不显示
         if (window.matchMedia('(display-mode: standalone)').matches) return;
         if (localStorage.getItem('pwa-install-dismissed')) return;

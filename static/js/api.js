@@ -643,4 +643,16 @@ const API = {
             body: JSON.stringify({ last_index: lastIndex }),
         });
     },
+
+    /** 初始化API基础URL（Android WebView时从原生接口获取） */
+    _initBase() {
+        if (window.CodeReaderAndroid) {
+            const serverUrl = window.CodeReaderAndroid.getServerUrl();
+            if (serverUrl) {
+                this.BASE = serverUrl.replace(/\/+$/, '') + '/api/v1';
+            }
+        }
+    },
 };
+// Android WebView 环境下初始化远程服务器地址
+API._initBase();
