@@ -384,7 +384,7 @@ const Offline = {
         const detail = await CacheDB.get('functionDetails', functionId);
         if (!detail || !detail.notes) return;
 
-        const idx = detail.notes.findIndex(n => n.localId === localId);
+        const idx = detail.notes.findIndex(n => String(n.id) === localId);
         if (idx !== -1) {
             detail.notes[idx] = serverNote;
         } else {

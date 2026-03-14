@@ -246,8 +246,9 @@ const API = {
         const body = options.body ? JSON.parse(options.body) : null;
 
         // PUT /functions/{id}/read → mark_read
-        if (/^\/functions\/(\d+)\/read$/.test(path)) {
-            const funcId = parseInt(RegExp.$1);
+        const markReadMatch = path.match(/^\/functions\/(\d+)\/read$/);
+        if (markReadMatch) {
+            const funcId = parseInt(markReadMatch[1]);
             // 更新 IndexedDB 中的函数详情
             const detail = await CacheDB.get('functionDetails', funcId);
             if (detail) {
@@ -343,8 +344,9 @@ const API = {
         }
 
         // PUT /progress/?project_id=X → save_progress
-        if (/^\/progress\/\?project_id=(\d+)$/.test(path) && method === 'PUT') {
-            const projectId = parseInt(RegExp.$1);
+        const progressMatch = path.match(/^\/progress\/\?project_id=(\d+)$/);
+        if (progressMatch && method === 'PUT') {
+            const projectId = parseInt(progressMatch[1]);
             const progress = { projectId, ...body };
             await CacheDB.put('progress', progress);
             await Offline.queueOperation({

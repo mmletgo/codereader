@@ -19,14 +19,15 @@
     color: var(--text-secondary); font-size: 14px; cursor: pointer;
 }
 
-/* 2. Offline Indicator Tag */
-.offline-tag {
+/* 2. Offline Indicator */
+.offline-indicator {
     display: none; padding: 2px 8px; border-radius: 4px; font-size: 12px;
-    font-weight: 600; line-height: 1.4;
+    font-weight: 600; line-height: 1.4; align-items: center; gap: 4px;
+}
+.offline-indicator--offline {
     background: #e5c07b; color: #21252b;
 }
-.offline-tag.show { display: inline-block; }
-.offline-tag.syncing {
+.offline-indicator--syncing {
     background: var(--accent); color: #fff;
     animation: sync-spin 1s linear infinite;
 }
@@ -74,11 +75,11 @@
 }
 
 /* 7. Note Unsync Badge */
+.note-item { position: relative; }
 .note-unsync-badge {
-    position: absolute; top: 6px; right: 6px;
     padding: 2px 6px; border-radius: 4px; font-size: 11px;
-    background: var(--bg-tertiary); color: var(--text-secondary);
-    pointer-events: none;
+    background: var(--bg-primary); color: var(--text-secondary);
+    flex-shrink: 0; white-space: nowrap;
 }
 
 /* 8. Offline Disabled State */
@@ -95,16 +96,16 @@
 .offline-disabled:hover .offline-tooltip { display: block; }
 
 /* 9. Sync Toast */
-.sync-toast {
+.offline-toast {
     position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
     padding: 10px 20px; border-radius: var(--radius); font-size: 14px;
     background: var(--bg-secondary); color: var(--text-primary);
     border: 1px solid var(--border); opacity: 0; pointer-events: none;
     transition: opacity .3s, transform .3s; z-index: 999;
 }
-.sync-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
-.sync-toast.success { border-color: var(--accent-success); color: var(--accent-success); }
-.sync-toast.error { border-color: var(--accent-danger); color: var(--accent-danger); }
+.offline-toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.offline-toast--success { border-color: var(--accent-success); color: var(--accent-success); }
+.offline-toast--error { border-color: var(--accent-danger); color: var(--accent-danger); }
 
 /* 10. Sync Spin Animation */
 @keyframes sync-spin {
