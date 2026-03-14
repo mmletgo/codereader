@@ -1,0 +1,112 @@
+/* ========== Offline / PWA Styles ========== */
+
+/* 1. PWA Install Banner */
+#pwa-install-banner {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: var(--bg-tertiary); border-bottom: 1px solid var(--border);
+    padding: 10px 16px; align-items: center; gap: 10px;
+    font-size: 14px; color: var(--text-primary);
+}
+#pwa-install-banner.show { display: flex; }
+#pwa-install-banner .pwa-install-btn {
+    min-height: 36px; padding: 0 14px; border: none; border-radius: var(--radius);
+    background: var(--accent); color: #fff; font-size: 14px; cursor: pointer;
+    margin-left: auto; white-space: nowrap;
+}
+#pwa-install-banner .pwa-dismiss-btn {
+    min-height: 36px; padding: 0 10px; border: none; background: none;
+    color: var(--text-secondary); font-size: 14px; cursor: pointer;
+}
+
+/* 2. Offline Indicator Tag */
+.offline-tag {
+    display: none; padding: 2px 8px; border-radius: 4px; font-size: 12px;
+    font-weight: 600; line-height: 1.4;
+    background: #e5c07b; color: #21252b;
+}
+.offline-tag.show { display: inline-block; }
+.offline-tag.syncing {
+    background: var(--accent); color: #fff;
+    animation: sync-spin 1s linear infinite;
+}
+
+/* 3. Cache Status Area in Project Card */
+.cache-status {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--text-secondary);
+}
+
+/* 4. Cache Progress Bar */
+.cache-progress {
+    position: relative; height: 6px; border-radius: 3px;
+    background: var(--bg-primary); overflow: hidden; margin: 8px 0 4px;
+}
+.cache-progress-bar {
+    height: 100%; border-radius: 3px; background: var(--accent);
+    transition: width .3s ease;
+}
+.cache-progress-text {
+    font-size: 12px; color: var(--text-secondary); text-align: right;
+}
+
+/* 5. Cache Action Buttons */
+.cache-btn-download, .cache-btn-delete, .cache-btn-update {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 36px; padding: 0 12px; border: none; border-radius: var(--radius);
+    font-size: 13px; cursor: pointer; gap: 4px;
+}
+.cache-btn-download { background: rgba(97,175,239,.15); color: var(--accent); }
+.cache-btn-download:active { background: rgba(97,175,239,.25); }
+.cache-btn-delete { background: none; color: var(--text-secondary); }
+.cache-btn-delete:active { color: var(--accent-danger); }
+.cache-btn-update { background: rgba(229,192,123,.15); color: #e5c07b; }
+.cache-btn-update:active { background: rgba(229,192,123,.25); }
+
+/* 6. Cache Info & Warning Labels */
+.cache-info {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--accent-success);
+}
+.cache-warning {
+    font-size: 12px; color: #e5c07b; margin-top: 4px;
+}
+
+/* 7. Note Unsync Badge */
+.note-unsync-badge {
+    position: absolute; top: 6px; right: 6px;
+    padding: 2px 6px; border-radius: 4px; font-size: 11px;
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    pointer-events: none;
+}
+
+/* 8. Offline Disabled State */
+.offline-disabled {
+    position: relative; opacity: .45; pointer-events: none;
+}
+.offline-tooltip {
+    display: none; position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%); white-space: nowrap;
+    padding: 4px 10px; border-radius: 4px; font-size: 12px;
+    background: var(--bg-secondary); color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+.offline-disabled:hover .offline-tooltip { display: block; }
+
+/* 9. Sync Toast */
+.sync-toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    padding: 10px 20px; border-radius: var(--radius); font-size: 14px;
+    background: var(--bg-secondary); color: var(--text-primary);
+    border: 1px solid var(--border); opacity: 0; pointer-events: none;
+    transition: opacity .3s, transform .3s; z-index: 999;
+}
+.sync-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.sync-toast.success { border-color: var(--accent-success); color: var(--accent-success); }
+.sync-toast.error { border-color: var(--accent-danger); color: var(--accent-danger); }
+
+/* 10. Sync Spin Animation */
+@keyframes sync-spin {
+    to { transform: rotate(360deg); }
+}
