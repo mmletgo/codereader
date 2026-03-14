@@ -333,6 +333,21 @@
     .paths-detail-actions {
         padding: 16px 24px;
     }
+
+    /* ========== Chat: PC side panel ========== */
+    .chat-overlay {
+        position: absolute;
+        inset: auto 0 0 auto;
+        width: 420px;
+        height: 100%;
+        z-index: 100;
+        border-left: 1px solid var(--border);
+    }
+
+    /* browse-main 需要 position: relative 来约束 absolute 子元素 */
+    .browse-main {
+        position: relative;
+    }
 }
 
 /* ========== Extra wide screens (≥1440px) ========== */
@@ -348,5 +363,9 @@
 
     .browse-code code {
         font-size: 15px;
+    }
+
+    .chat-overlay {
+        width: 480px;
     }
 }

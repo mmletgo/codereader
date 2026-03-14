@@ -151,6 +151,12 @@ const Browse = {
      */
     async showFunction(index) {
         if (index < 0 || index >= this.filteredFunctions.length) return;
+
+        // 切换函数时关闭对话面板
+        if (Chat.isOpen) {
+            Chat.close();
+        }
+
         this.currentIndex = index;
         const func = this.filteredFunctions[index];
 
@@ -699,6 +705,9 @@ const Browse = {
                 this.next();
             }
         });
+
+        // AI对话模块事件绑定
+        Chat.bindEvents();
     },
 
     /** 重新扫描项目代码 */

@@ -232,6 +232,26 @@ const API = {
         });
     },
 
+    // ========== AI Chat ==========
+
+    /** 获取对话历史 */
+    async getChatHistory(functionId) {
+        return this.request(`/ai/chat?function_id=${functionId}`);
+    },
+
+    /** 发送对话消息 */
+    async sendChatMessage(functionId, message) {
+        return this.request('/ai/chat', {
+            method: 'POST',
+            body: JSON.stringify({ function_id: functionId, message }),
+        });
+    },
+
+    /** 重置对话 */
+    async resetChat(functionId) {
+        return this.request(`/ai/chat?function_id=${functionId}`, { method: 'DELETE' });
+    },
+
     // ========== Reading Paths ==========
 
     /** 创建阅读路径（AI生成） */

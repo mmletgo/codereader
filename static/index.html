@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/code.css">
     <link rel="stylesheet" href="css/graph.css?v=2">
     <link rel="stylesheet" href="css/responsive.css?v=3">
+    <link rel="stylesheet" href="css/chat.css">
 </head>
 <body>
     <!-- 视图1: 项目列表页 -->
@@ -100,6 +101,7 @@
                     <button class="nav-btn" id="btn-next" title="下一个函数">&raquo;</button>
                     <div class="nav-spacer"></div>
                     <button class="nav-btn nav-btn-exit-path" id="btn-exit-path" title="退出路径" style="display:none;">&#10005;</button>
+                    <button class="nav-btn nav-btn-icon nav-btn-chat" id="btn-goto-chat" title="AI对话">&#128172;</button>
                     <button class="nav-btn nav-btn-icon" id="btn-goto-paths" title="阅读路径">&#9889;</button>
                     <button class="nav-btn nav-btn-icon" id="btn-goto-graph" title="调用关系图">&#128436;</button>
                     <button class="nav-btn nav-btn-icon" id="btn-goto-list" title="函数列表">&#9776;</button>
@@ -126,6 +128,23 @@
                         <div id="notes-list" class="notes-list"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+        <!-- AI对话覆盖层 -->
+        <div id="chat-overlay" class="chat-overlay" style="display:none;">
+            <div class="chat-header">
+                <button class="chat-back-btn" id="chat-back-btn">&larr;</button>
+                <span class="chat-header-title">AI 对话</span>
+                <span class="chat-header-func" id="chat-func-name"></span>
+                <button class="chat-reset-btn" id="chat-reset-btn" title="重置对话">&#8635;</button>
+            </div>
+            <div class="chat-body-changed" id="chat-body-changed" style="display:none;">
+                &#9888; 函数代码已更新，对话上下文可能不匹配
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-area">
+                <textarea class="chat-textarea" id="chat-input" rows="1" placeholder="输入你的问题..."></textarea>
+                <button class="chat-send-btn" id="chat-send-btn">&#10148;</button>
             </div>
         </div>
     </section>
@@ -236,6 +255,7 @@
     <script src="js/api.js?v=3"></script>
     <script src="js/notes.js"></script>
     <script src="js/ai.js"></script>
+    <script src="js/chat.js"></script>
     <script src="js/browse.js?v=4"></script>
     <script src="js/paths.js?v=2"></script>
     <script src="js/graph.js?v=2"></script>
