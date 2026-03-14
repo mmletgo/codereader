@@ -127,6 +127,18 @@ CREATE TABLE IF NOT EXISTS reading_paths (
     updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_reading_paths_project ON reading_paths(project_id);
+
+CREATE TABLE IF NOT EXISTS ai_conversations (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    function_id   INTEGER NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    messages      TEXT NOT NULL DEFAULT '[]',
+    func_body_hash TEXT NOT NULL,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(function_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_conversations_function ON ai_conversations(function_id);
 """
 
 
@@ -159,6 +171,25 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
                 updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             CREATE INDEX IF NOT EXISTS idx_reading_paths_project ON reading_paths(project_id);
+        """)
+
+    # 检查 ai_conversations 表是否存在，不存在则创建
+    table_exists = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='ai_conversations'"
+    ).fetchone()
+    if not table_exists:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS ai_conversations (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                function_id   INTEGER NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
+                project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                messages      TEXT NOT NULL DEFAULT '[]',
+                func_body_hash TEXT NOT NULL,
+                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(function_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_ai_conversations_function ON ai_conversations(function_id);
         """)
 
 

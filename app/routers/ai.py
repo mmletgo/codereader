@@ -8,11 +8,17 @@ from app.models import (
     AILineExplainResponse,
     AIAutoNotesRequest,
     AIAutoNotesResponse,
+    ChatSendRequest,
+    ChatHistoryResponse,
+    ChatSendResponse,
 )
 from app.services.ai_service import (
     get_or_generate_explanation,
     generate_line_explanation,
     generate_auto_notes,
+    get_chat_history,
+    send_chat_message,
+    delete_chat,
 )
 
 router = APIRouter()
@@ -57,3 +63,41 @@ def auto_notes(data: AIAutoNotesRequest) -> AIAutoNotesResponse:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI分析失败: {str(e)}")
+
+
+@router.get("/chat", response_model=ChatHistoryResponse)
+def chat_history(
+    function_id: int = Query(..., description="函数ID"),
+) -> ChatHistoryResponse:
+    """获取对话历史"""
+    try:
+        with get_db() as conn:
+            data = get_chat_history(conn, function_id)
+            return ChatHistoryResponse(**data)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取对话历史失败: {str(e)}")
+
+
+@router.post("/chat", response_model=ChatSendResponse)
+def chat_send(data: ChatSendRequest) -> ChatSendResponse:
+    """发送对话消息"""
+    try:
+        with get_db() as conn:
+            result = send_chat_message(conn, data.function_id, data.message)
+            return ChatSendResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI对话失败: {str(e)}")
+
+
+@router.delete("/chat")
+def chat_delete(
+    function_id: int = Query(..., description="函数ID"),
+) -> dict[str, bool]:
+    """重置对话"""
+    with get_db() as conn:
+        deleted = delete_chat(conn, function_id)
+        return {"deleted": deleted}

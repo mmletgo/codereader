@@ -246,3 +246,27 @@ class ReadingPathDetailResponse(BaseModel):
 
 class ReadingPathProgressUpdate(BaseModel):
     last_index: int
+
+
+# ========== AI Chat ==========
+
+class ChatMessage(BaseModel):
+    role: str          # "user" | "assistant"
+    content: str
+    created_at: str
+
+
+class ChatSendRequest(BaseModel):
+    function_id: int
+    message: str
+
+
+class ChatHistoryResponse(BaseModel):
+    function_id: int
+    messages: list[ChatMessage]
+    func_body_changed: bool = False
+
+
+class ChatSendResponse(BaseModel):
+    reply: ChatMessage
+    func_body_changed: bool = False
