@@ -4,38 +4,13 @@ import re
 import sqlite3
 from typing import Any
 
-import anthropic
-
-from config import CLAUDE_API_BASE_URL, CLAUDE_API_KEY, CLAUDE_MODEL
 from app.database import fetch_one, fetch_all, execute, insert_row
 from app.models import (
     ReadingPathDetailResponse,
     ReadingPathFunctionItem,
     ReadingPathListItem,
 )
-
-
-def _get_client() -> anthropic.Anthropic:
-    """获取 Anthropic 客户端"""
-    return anthropic.Anthropic(
-        api_key=CLAUDE_API_KEY,
-        base_url=CLAUDE_API_BASE_URL,
-    )
-
-
-def _call_claude(prompt: str, system: str = "") -> str:
-    """调用 Claude API"""
-    client = _get_client()
-    messages: list[dict[str, str]] = [{"role": "user", "content": prompt}]
-    kwargs: dict[str, Any] = {
-        "model": CLAUDE_MODEL,
-        "max_tokens": 4096,
-        "messages": messages,
-    }
-    if system:
-        kwargs["system"] = system
-    response = client.messages.create(**kwargs)
-    return response.content[0].text
+from app.services.ai_service import _call_claude
 
 
 def _parse_ai_json(text: str) -> dict[str, Any]:
