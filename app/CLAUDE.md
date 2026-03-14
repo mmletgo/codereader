@@ -3,16 +3,17 @@
 ## 文件说明
 - `database.py` — SQLite数据库管理，建表语句，连接上下文管理器 `get_db()`，CRUD辅助函数，数据库迁移(`_migrate_db`)
 - `models.py` — 所有Pydantic模型定义（请求体、响应体、内部数据结构），含CalleeOnLine（行级调用信息）
-- `routers/` — API路由层（5个路由模块）
-- `services/` — 业务逻辑层（4个服务模块）
+- `routers/` — API路由层（6个路由模块）
+- `services/` — 业务逻辑层（5个服务模块）
 
-## 数据库表结构 (6张表)
+## 数据库表结构 (7张表)
 - `projects` — 项目信息（路径、名称、扫描时间）
 - `files` — 源文件（内容、行数、语言）
 - `functions` — 函数定义（签名、代码体、行号、排序权重sort_order、已读状态is_read）
 - `call_relations` — 调用关系边（caller_id→callee_id，外部调用callee_id=NULL）
 - `notes` — 阅后备注（绑定function_id，类型note_type，来源source：'user'用户手动/'ai'AI生成）
 - `ai_explanations` — AI函数解读缓存（绑定function_id，存储explanation和func_body_hash用于缓存失效判断）
+- `reading_paths` — AI阅读路径（project_id, name, description, function_items JSON存储qualified_name+reason列表, last_index跟踪进度）
 
 ## 函数已读状态
 - 已读状态直接存储在 functions 表的 `is_read` 列（BOOLEAN DEFAULT 0）

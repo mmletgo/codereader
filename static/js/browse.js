@@ -537,12 +537,12 @@ const Browse = {
                 this.functions.forEach(f => { f.is_read = false; });
                 this._unreadCount = this.functions.length;
                 // 更新当前函数详情缓存
-                for (const key of Object.keys(this.cache)) {
-                    if (this.cache[key]) this.cache[key].is_read = false;
+                for (const [, detail] of this.cache) {
+                    if (detail) detail.is_read = false;
                 }
                 // 刷新显示
-                this._updateNavInfo();
-                this._renderSidebarList();
+                this._updateNav();
+                this._renderSidebar();
             } catch (e) {
                 alert('重置失败: ' + e.message);
             }
