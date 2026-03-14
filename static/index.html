@@ -10,12 +10,26 @@
     <link rel="stylesheet" href="css/graph.css?v=2">
     <link rel="stylesheet" href="css/responsive.css?v=3">
     <link rel="stylesheet" href="css/chat.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#282c34">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="stylesheet" href="css/offline.css">
 </head>
 <body>
+    <!-- PWA安装引导 -->
+    <div id="pwa-install-banner" class="pwa-install-banner" style="display:none;">
+        <span>添加到主屏幕以支持离线使用</span>
+        <button id="pwa-install-btn" class="btn btn-sm btn-primary">安装</button>
+        <button id="pwa-dismiss-btn" class="btn btn-sm btn-secondary">不用了</button>
+    </div>
+
     <!-- 视图1: 项目列表页 -->
     <section id="view-projects" class="view">
         <header class="top-bar">
             <div class="top-bar-title">CodeReader</div>
+            <span id="offline-indicator" class="offline-tag" style="display:none;"></span>
         </header>
         <div class="view-body">
             <div id="projects-list" class="projects-list"></div>
@@ -251,8 +265,12 @@
     <script src="lib/highlight.min.js"></script>
     <script src="lib/highlight-python.min.js"></script>
     <script src="lib/d3.min.js"></script>
+    <!-- JS: 离线缓存模块（需在api.js之前加载） -->
+    <script src="js/cache-db.js"></script>
     <!-- JS: 应用模块 -->
-    <script src="js/api.js?v=3"></script>
+    <script src="js/api.js?v=4"></script>
+    <script src="js/offline.js"></script>
+    <script src="js/cache-manager.js"></script>
     <script src="js/notes.js"></script>
     <script src="js/ai.js"></script>
     <script src="js/chat.js"></script>
@@ -261,6 +279,6 @@
     <script src="js/graph.js?v=2"></script>
     <script src="js/list.js"></script>
     <script src="js/export.js"></script>
-    <script src="js/app.js?v=4"></script>
+    <script src="js/app.js?v=5"></script>
 </body>
 </html>
