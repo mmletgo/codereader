@@ -4,6 +4,7 @@
 - `index.html` — SPA入口，引入所有CSS/JS，定义6个section视图容器和新建项目对话框
 - `css/main.css` — 主样式（暗色主题变量、flex布局、触控44px最小高度、响应式组件）
 - `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖、行级调用按钮和展开区样式、骨架屏shimmer动画）
+- `css/chat.css` — AI对话界面样式（覆盖层/侧面板、消息气泡、打字动画、输入区、Markdown渲染、导航按钮指示器）
 - `css/graph.css` — D3调用关系图节点/连线/缩放样式
 - `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar、阅读路径页双面板并排布局；≥1440px断点：更宽侧边栏、更大字体）
 - `js/app.js` — 应用入口，hash路由管理（6条路由规则），项目列表页渲染和创建/删除逻辑
@@ -14,6 +15,7 @@
 - `js/ai.js` — AI辅助分析模块（函数解读面板展开/折叠、行级代码解释、AI自动备注生成、简单Markdown渲染、前端缓存+防重复请求）
 - `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存、AI备注显示AI标识）
 - `js/list.js` — 函数列表页（按文件分组、搜索debounce 300ms、点击跳转浏览器）
+- `js/chat.js` — AI对话模块（对话界面打开/关闭、消息渲染、发送/重置、打字指示器、预设问题、自动滚动、visualViewport虚拟键盘适配）
 - `js/export.js` — 导出页面（JSON/Markdown格式切换、预览缓存、Blob下载）
 - `lib/` — 第三方库本地文件（highlight.min.js, highlight-python.min.js, d3.min.js, github-dark.min.css）
 
@@ -80,3 +82,6 @@
 - GET /api/v1/reading-paths/{id} — 阅读路径详情（含function_id映射）
 - DELETE /api/v1/reading-paths/{id} — 删除阅读路径
 - PUT /api/v1/reading-paths/{id}/progress — 更新阅读路径进度（body: {last_index}）
+- GET /api/v1/ai/chat?function_id=X — 获取对话历史（含func_body_changed标记）
+- POST /api/v1/ai/chat — 发送对话消息（body: {function_id, message}），AI支持tool use
+- DELETE /api/v1/ai/chat?function_id=X — 重置对话

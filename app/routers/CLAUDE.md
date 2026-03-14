@@ -54,3 +54,8 @@
 - `GET /{path_id}` — 获取阅读路径详情
 - `DELETE /{path_id}` — 删除阅读路径
 - `PUT /{path_id}/progress` — 更新阅读进度，请求体：ReadingPathProgressUpdate(last_index)
+
+### ai.py（对话端点）
+- `GET /chat` — 获取对话历史，查询参数：function_id，返回ChatHistoryResponse（含func_body_changed标记）
+- `POST /chat` — 发送对话消息，请求体：ChatSendRequest(function_id, message)，AI支持tool use（read_file/search_functions/get_call_relations），返回ChatSendResponse
+- `DELETE /chat` — 重置对话，查询参数：function_id

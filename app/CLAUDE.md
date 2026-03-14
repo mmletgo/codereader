@@ -14,6 +14,7 @@
 - `notes` — 阅后备注（绑定function_id，类型note_type，来源source：'user'用户手动/'ai'AI生成）
 - `ai_explanations` — AI函数解读缓存（绑定function_id，存储explanation和func_body_hash用于缓存失效判断）
 - `reading_paths` — AI阅读路径（project_id, name, description, function_items JSON存储qualified_name+reason列表, last_index跟踪进度）
+- `ai_conversations` — AI对话记录（function_id唯一约束，messages JSON存储[{role,content,created_at}]，func_body_hash检测函数变更）
 
 ## 函数已读状态
 - 已读状态直接存储在 functions 表的 `is_read` 列（BOOLEAN DEFAULT 0）

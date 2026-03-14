@@ -5,7 +5,7 @@
 - `function_service.py` — 函数查询（分页列表含计数、详情含调用关系+备注+行级调用信息、caller/callee查询）
 - `note_service.py` — 备注CRUD（创建、更新非None字段、删除、按条件查询）
 - `export_service.py` — 导出逻辑（组装有备注函数的完整数据、渲染Markdown格式）
-- `ai_service.py` — AI辅助分析（函数解读生成与缓存、行级代码解释、自动备注生成），使用anthropic SDK调用Claude API
+- `ai_service.py` — AI辅助分析（函数解读生成与缓存、行级代码解释、自动备注生成、函数级AI对话），使用anthropic SDK调用Claude API，对话支持tool use（read_file/search_functions/get_call_relations）
 - `reading_path_service.py` — AI阅读路径（生成、列表、详情、删除、进度更新），AI根据用户查询从项目函数列表中选择相关函数并排序为推荐阅读路径
 
 ## 职责划分
