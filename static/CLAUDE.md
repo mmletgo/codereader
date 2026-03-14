@@ -16,6 +16,8 @@
 - `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存、AI备注显示AI标识）
 - `js/list.js` — 函数列表页（按文件分组、搜索debounce 300ms、点击跳转浏览器）
 - `js/chat.js` — AI对话模块（对话界面打开/关闭、消息渲染、发送/重置、打字指示器、预设问题、自动滚动、visualViewport虚拟键盘适配）
+- `js/cache-db.js` — IndexedDB封装层（数据库codereader-cache，10个对象存储，通用CRUD、offlineOps队列、cacheMeta管理、按projectId索引批量删除）
+- `js/cache-manager.js` — 缓存下载管理器（downloadProject并发下载项目全部数据到IndexedDB、deleteProjectCache清理、getCacheStatus/getCacheInfo状态查询、_runWithConcurrency并发控制器）
 - `js/export.js` — 导出页面（JSON/Markdown格式切换、预览缓存、Blob下载）
 - `lib/` — 第三方库本地文件（highlight.min.js, highlight-python.min.js, d3.min.js, github-dark.min.css）
 
