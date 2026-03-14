@@ -59,6 +59,8 @@
                 <div class="dropdown-divider"></div>
                 <button class="dropdown-item dropdown-btn" id="btn-rescan">刷新代码</button>
                 <button class="dropdown-item dropdown-btn" id="btn-reset-read">重置已读</button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item dropdown-btn" id="btn-reading-paths">阅读路径</button>
             </div>
         </header>
         <div class="browse-layout">
@@ -72,6 +74,7 @@
                 <div class="browse-info" id="browse-info">
                     <div class="func-qualified-name" id="func-qualified-name"></div>
                     <div class="func-file-info" id="func-file-info"></div>
+                    <div class="func-path-reason" id="func-path-reason" style="display:none;"></div>
                 </div>
                 <div class="browse-code" id="browse-code">
                     <pre><code id="code-block" class="language-python"></code></pre>
@@ -163,6 +166,32 @@
             </div>
         </div>
     </section>
+
+    <!-- 阅读路径对话框 -->
+    <div id="dialog-reading-paths" class="dialog-overlay" style="display:none;">
+        <div class="dialog" style="max-width:500px;">
+            <h3>阅读路径</h3>
+            <div class="reading-path-create">
+                <label class="input-label">描述你想了解的业务逻辑</label>
+                <input type="text" id="input-path-query" class="input" placeholder="如：实盘的策略逻辑">
+                <div class="dialog-actions" style="margin-top:12px;">
+                    <button id="btn-generate-path" class="btn btn-primary btn-sm">AI 生成阅读路径</button>
+                </div>
+                <div id="path-create-error" class="error-msg" style="display:none;"></div>
+            </div>
+            <div class="dropdown-divider" style="margin:16px 0;"></div>
+            <div class="reading-path-list-section">
+                <div class="input-label">已有路径</div>
+                <div id="reading-path-list" class="reading-path-list">
+                    <div style="color:var(--text-secondary);font-size:13px;">加载中...</div>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button id="btn-close-reading-paths" class="btn btn-secondary btn-sm">关闭</button>
+                <button id="btn-deactivate-path" class="btn btn-secondary btn-sm" style="display:none;">退出当前路径</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 全局加载指示器 -->
     <div id="loading-overlay" class="loading-overlay" style="display:none;">

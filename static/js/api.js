@@ -231,4 +231,37 @@ const API = {
             }),
         });
     },
+
+    // ========== Reading Paths ==========
+
+    /** 创建阅读路径（AI生成） */
+    async createReadingPath(projectId, query) {
+        return this.request('/reading-paths/', {
+            method: 'POST',
+            body: JSON.stringify({ project_id: projectId, query }),
+        });
+    },
+
+    /** 获取阅读路径列表 */
+    async getReadingPaths(projectId) {
+        return this.request(`/reading-paths/?project_id=${projectId}`);
+    },
+
+    /** 获取阅读路径详情 */
+    async getReadingPathDetail(pathId) {
+        return this.request(`/reading-paths/${pathId}`);
+    },
+
+    /** 删除阅读路径 */
+    async deleteReadingPath(pathId) {
+        return this.request(`/reading-paths/${pathId}`, { method: 'DELETE' });
+    },
+
+    /** 更新阅读路径进度 */
+    async updateReadingPathProgress(pathId, lastIndex) {
+        return this.request(`/reading-paths/${pathId}/progress`, {
+            method: 'PUT',
+            body: JSON.stringify({ last_index: lastIndex }),
+        });
+    },
 };

@@ -20,6 +20,7 @@ const Browse = {
     filterUnread: false,   // 是否只显示未读函数
     _saveTimer: null,      // 防抖保存定时器
     _unreadCount: 0,       // 未读函数计数（增量维护）
+    activeReadingPath: null,  // 当前激活的阅读路径详情
 
     /**
      * 初始化浏览器
@@ -32,6 +33,7 @@ const Browse = {
         this.htmlCache.clear();
         this.filterHasNotes = false;
         this.filterUnread = false;
+        this.activeReadingPath = null;
         document.getElementById('filter-has-notes').checked = false;
         document.getElementById('filter-unread').checked = false;
         this._bindEvents();
@@ -99,14 +101,35 @@ const Browse = {
 
     /** 应用筛选 */
     _applyFilter() {
-        let list = this.functions;
-        if (this.filterHasNotes) {
-            list = list.filter(f => f.has_notes || f.note_count > 0);
+        if (this.activeReadingPath) {
+            // 路径激活时，按路径中的函数顺序展示
+            const pathFuncs = this.activeReadingPath.functions;
+            const funcMap = new Map(this.functions.map(f => [f.id, f]));
+            this.filteredFunctions = [];
+            for (const item of pathFuncs) {
+                if (item.function_id != null) {
+                    const func = funcMap.get(item.function_id);
+                    if (func) {
+                        // 附加路径理由（临时属性）
+                        func._pathReason = item.reason;
+                        this.filteredFunctions.push(func);
+                    }
+                }
+            }
+        } else {
+            let list = this.functions;
+            if (this.filterHasNotes) {
+                list = list.filter(f => f.has_notes || f.note_count > 0);
+            }
+            if (this.filterUnread) {
+                list = list.filter(f => !f.is_read);
+            }
+            this.filteredFunctions = [...list];
+            // 清理临时属性
+            for (const f of this.filteredFunctions) {
+                delete f._pathReason;
+            }
         }
-        if (this.filterUnread) {
-            list = list.filter(f => !f.is_read);
-        }
-        this.filteredFunctions = [...list];
         this._renderSidebar();
     },
 
@@ -187,6 +210,10 @@ const Browse = {
         if (!func) return;
         try {
             await API.saveProgress(this.projectId, func.id);
+            // 路径激活时同步保存路径进度
+            if (this.activeReadingPath) {
+                await API.updateReadingPathProgress(this.activeReadingPath.id, this.currentIndex);
+            }
         } catch (_) { /* 静默失败 */ }
     },
 
@@ -195,6 +222,18 @@ const Browse = {
         document.getElementById('func-qualified-name').textContent = detail.qualified_name;
         const fileInfo = `\u{1F4C4} ${detail.file_path}:${detail.start_line}-${detail.end_line}`;
         document.getElementById('func-file-info').textContent = fileInfo;
+
+        // 显示阅读路径理由
+        const reasonEl = document.getElementById('func-path-reason');
+        if (reasonEl) {
+            const func = this.filteredFunctions[this.currentIndex];
+            if (this.activeReadingPath && func && func._pathReason) {
+                reasonEl.textContent = func._pathReason;
+                reasonEl.style.display = 'block';
+            } else {
+                reasonEl.style.display = 'none';
+            }
+        }
     },
 
     /** 构建代码HTML（高亮+行号+调用按钮+AI按钮） */
@@ -331,8 +370,13 @@ const Browse = {
     _updateNav() {
         const total = this.filteredFunctions.length;
         const current = total > 0 ? this.currentIndex + 1 : 0;
-        document.getElementById('nav-counter').textContent =
-            `${current}/${total}` + (this._unreadCount > 0 ? ` (未读${this._unreadCount})` : '');
+        let label;
+        if (this.activeReadingPath) {
+            label = `路径 ${current}/${total}`;
+        } else {
+            label = `${current}/${total}` + (this._unreadCount > 0 ? ` (未读${this._unreadCount})` : '');
+        }
+        document.getElementById('nav-counter').textContent = label;
         document.getElementById('btn-prev').disabled = this.currentIndex <= 0;
         document.getElementById('btn-next').disabled = this.currentIndex >= total - 1;
     },
@@ -504,6 +548,62 @@ const Browse = {
             }
         });
 
+        // 阅读路径按钮
+        document.getElementById('btn-reading-paths').addEventListener('click', () => {
+            document.getElementById('browse-menu').style.display = 'none';
+            this._showReadingPathsDialog();
+        });
+
+        // 阅读路径对话框 - 生成
+        document.getElementById('btn-generate-path').addEventListener('click', () => {
+            this._createReadingPath();
+        });
+
+        // 阅读路径对话框 - 输入框回车
+        document.getElementById('input-path-query').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this._createReadingPath();
+            }
+        });
+
+        // 阅读路径对话框 - 关闭
+        document.getElementById('btn-close-reading-paths').addEventListener('click', () => {
+            document.getElementById('dialog-reading-paths').style.display = 'none';
+        });
+
+        // 阅读路径对话框 - 退出当前路径
+        document.getElementById('btn-deactivate-path').addEventListener('click', () => {
+            document.getElementById('dialog-reading-paths').style.display = 'none';
+            this.deactivateReadingPath();
+        });
+
+        // 阅读路径对话框 - 背景点击关闭
+        document.getElementById('dialog-reading-paths').addEventListener('click', (e) => {
+            if (e.target.classList.contains('dialog-overlay')) {
+                e.target.style.display = 'none';
+            }
+        });
+
+        // 阅读路径列表 - 点击激活或删除
+        document.getElementById('reading-path-list').addEventListener('click', (e) => {
+            // 删除按钮
+            const deleteBtn = e.target.closest('.reading-path-delete');
+            if (deleteBtn) {
+                e.stopPropagation();
+                const pathId = parseInt(deleteBtn.dataset.pathId);
+                this._deleteReadingPath(pathId);
+                return;
+            }
+            // 点击路径项 - 激活
+            const item = e.target.closest('.reading-path-item');
+            if (item) {
+                const pathId = parseInt(item.dataset.pathId);
+                document.getElementById('dialog-reading-paths').style.display = 'none';
+                this.activateReadingPath(pathId);
+            }
+        });
+
         // 返回按钮
         document.getElementById('browse-back').addEventListener('click', () => {
             location.hash = '#/';
@@ -669,7 +769,29 @@ const Browse = {
             return;
         }
 
-        // 按文件分组
+        // 路径激活时，按路径顺序展示（带序号，不按文件分组）
+        if (this.activeReadingPath) {
+            let html = '';
+            funcs.forEach((f, idx) => {
+                const isActive = this.currentDetail && this.currentDetail.id === f.id;
+                const isRead = f.is_read;
+                const shortName = f.qualified_name.includes('.')
+                    ? f.qualified_name.split('.').slice(-1)[0]
+                    : f.qualified_name;
+
+                let badges = '';
+                if (!isRead) badges += '<span class="sidebar-func-badge unread">新</span>';
+
+                html += `<div class="sidebar-func-item${isActive ? ' active' : ''}${isRead ? ' read' : ''}" data-func-id="${f.id}">
+                <span class="sidebar-func-name" title="${this._escapeHtml(f.qualified_name)}"><span style="color:var(--text-secondary);margin-right:4px;">${idx + 1}.</span>${this._escapeHtml(shortName)}</span>
+                ${badges}
+            </div>`;
+            });
+            listEl.innerHTML = html;
+            return;
+        }
+
+        // 默认：按文件分组
         const groups = new Map();
         for (const f of funcs) {
             const file = f.file_path || '未知文件';
@@ -679,7 +801,6 @@ const Browse = {
 
         let html = '';
         for (const [file, items] of groups) {
-            // 只显示文件名最后两级路径
             const shortPath = file.split('/').slice(-2).join('/');
             html += `<div class="sidebar-file-header" title="${this._escapeHtml(file)}">${this._escapeHtml(shortPath)}</div>`;
             for (const f of items) {
@@ -687,7 +808,6 @@ const Browse = {
                 const isRead = f.is_read;
                 const hasNotes = f.has_notes || f.note_count > 0;
 
-                // 只显示简短函数名（不含模块前缀）
                 const shortName = f.qualified_name.includes('.')
                     ? f.qualified_name.split('.').slice(-1)[0]
                     : f.qualified_name;
@@ -697,9 +817,9 @@ const Browse = {
                 if (hasNotes) badges += '<span class="sidebar-func-badge has-notes">备注</span>';
 
                 html += `<div class="sidebar-func-item${isActive ? ' active' : ''}${isRead ? ' read' : ''}" data-func-id="${f.id}">
-                    <span class="sidebar-func-name" title="${this._escapeHtml(f.qualified_name)}">${this._escapeHtml(shortName)}</span>
-                    ${badges}
-                </div>`;
+                <span class="sidebar-func-name" title="${this._escapeHtml(f.qualified_name)}">${this._escapeHtml(shortName)}</span>
+                ${badges}
+            </div>`;
             }
         }
         listEl.innerHTML = html;
@@ -734,6 +854,134 @@ const Browse = {
                 const unreadBadge = item.querySelector('.sidebar-func-badge.unread');
                 if (unreadBadge) unreadBadge.remove();
             }
+        }
+    },
+
+    /** 激活阅读路径 */
+    async activateReadingPath(pathId) {
+        try {
+            const detail = await API.getReadingPathDetail(pathId);
+            if (!detail || detail.functions.length === 0) {
+                alert('该路径中没有可用的函数');
+                return;
+            }
+            this.activeReadingPath = detail;
+            // 取消筛选
+            this.filterHasNotes = false;
+            this.filterUnread = false;
+            document.getElementById('filter-has-notes').checked = false;
+            document.getElementById('filter-unread').checked = false;
+            this._applyFilter();
+            // 跳转到上次阅读位置
+            const startIdx = Math.min(detail.last_index, this.filteredFunctions.length - 1);
+            if (this.filteredFunctions.length > 0) {
+                await this.showFunction(Math.max(0, startIdx));
+            }
+            this._updateNav();
+        } catch (err) {
+            alert('加载路径失败: ' + err.message);
+        }
+    },
+
+    /** 退出阅读路径 */
+    deactivateReadingPath() {
+        this.activeReadingPath = null;
+        this._applyFilter();
+        // 恢复当前函数位置
+        if (this.currentDetail) {
+            const idx = this.filteredFunctions.findIndex(f => f.id === this.currentDetail.id);
+            if (idx >= 0) {
+                this.showFunction(idx);
+            } else if (this.filteredFunctions.length > 0) {
+                this.showFunction(0);
+            }
+        }
+        this._updateNav();
+    },
+
+    /** 打开阅读路径对话框 */
+    async _showReadingPathsDialog() {
+        const dialog = document.getElementById('dialog-reading-paths');
+        dialog.style.display = 'flex';
+        // 清空输入
+        document.getElementById('input-path-query').value = '';
+        document.getElementById('path-create-error').style.display = 'none';
+        // 显示/隐藏退出按钮
+        const deactivateBtn = document.getElementById('btn-deactivate-path');
+        deactivateBtn.style.display = this.activeReadingPath ? '' : 'none';
+        // 加载路径列表
+        await this._loadReadingPathList();
+    },
+
+    /** 加载阅读路径列表到对话框 */
+    async _loadReadingPathList() {
+        const listEl = document.getElementById('reading-path-list');
+        try {
+            const paths = await API.getReadingPaths(this.projectId);
+            if (paths.length === 0) {
+                listEl.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">暂无阅读路径，输入描述生成一个吧</div>';
+                return;
+            }
+            const activeId = this.activeReadingPath ? this.activeReadingPath.id : null;
+            let html = '';
+            for (const p of paths) {
+                const isActive = p.id === activeId;
+                html += `<div class="reading-path-item${isActive ? ' active' : ''}" data-path-id="${p.id}">
+                <div class="reading-path-info">
+                    <div class="reading-path-name">${this._escapeHtml(p.name)}</div>
+                    <div class="reading-path-meta">${p.function_count} 个函数 · 已读到 ${p.last_index + 1}/${p.function_count}${isActive ? ' · 当前激活' : ''}</div>
+                </div>
+                <button class="reading-path-delete" data-path-id="${p.id}" title="删除">✕</button>
+            </div>`;
+            }
+            listEl.innerHTML = html;
+        } catch (err) {
+            listEl.innerHTML = `<div style="color:var(--accent-danger);font-size:13px;">加载失败: ${err.message}</div>`;
+        }
+    },
+
+    /** 创建阅读路径 */
+    async _createReadingPath() {
+        const query = document.getElementById('input-path-query').value.trim();
+        const errorEl = document.getElementById('path-create-error');
+        if (!query) {
+            errorEl.textContent = '请输入你想了解的业务逻辑描述';
+            errorEl.style.display = 'block';
+            return;
+        }
+        errorEl.style.display = 'none';
+        const btn = document.getElementById('btn-generate-path');
+        const oldText = btn.textContent;
+        btn.textContent = 'AI 分析中...';
+        btn.disabled = true;
+        try {
+            const path = await API.createReadingPath(this.projectId, query);
+            // 关闭对话框
+            document.getElementById('dialog-reading-paths').style.display = 'none';
+            // 自动激活
+            await this.activateReadingPath(path.id);
+        } catch (err) {
+            errorEl.textContent = '生成失败: ' + err.message;
+            errorEl.style.display = 'block';
+        } finally {
+            btn.textContent = oldText;
+            btn.disabled = false;
+        }
+    },
+
+    /** 删除阅读路径 */
+    async _deleteReadingPath(pathId) {
+        if (!confirm('确认删除该阅读路径？')) return;
+        try {
+            await API.deleteReadingPath(pathId);
+            // 如果删除的是当前激活的路径，取消激活
+            if (this.activeReadingPath && this.activeReadingPath.id === pathId) {
+                this.deactivateReadingPath();
+            }
+            // 刷新列表
+            await this._loadReadingPathList();
+        } catch (err) {
+            alert('删除失败: ' + err.message);
         }
     },
 
