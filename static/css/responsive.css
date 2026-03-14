@@ -264,6 +264,44 @@
         max-width: 500px;
         padding: 32px;
     }
+
+    /* ========== Paths Page: PC two-column ========== */
+    .paths-card:hover {
+        border-color: var(--accent);
+        background: var(--bg-tertiary);
+    }
+
+    .paths-func-item:hover:not(.unavailable) {
+        background: var(--bg-tertiary);
+    }
+
+    .paths-detail-back-btn:hover {
+        text-decoration: underline;
+    }
+
+    .paths-create-section {
+        padding: 20px 24px;
+    }
+
+    .paths-card-list {
+        padding: 0 24px 24px;
+    }
+
+    .paths-detail-header {
+        padding: 12px 24px;
+    }
+
+    .paths-detail-meta {
+        padding: 20px 24px;
+    }
+
+    .paths-func-list {
+        padding: 8px 24px;
+    }
+
+    .paths-detail-actions {
+        padding: 16px 24px;
+    }
 }
 
 /* ========== Extra wide screens (≥1440px) ========== */
