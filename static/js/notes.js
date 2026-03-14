@@ -70,7 +70,7 @@ const Notes = {
                     <div class="note-content">${this._escapeHtml(note.content)}</div>
                     <div class="note-time">${this._formatTime(note.created_at)}</div>
                 </div>
-                <button class="note-delete" data-note-id="${note.id}" title="删除">&times;</button>
+                ${note._isLocal ? '<span class="note-unsync-badge">未同步</span>' : ''}<button class="note-delete" data-note-id="${note.id}" title="删除">&times;</button>
             </div>
         `).join('');
 
@@ -78,7 +78,7 @@ const Notes = {
         container.querySelectorAll('.note-delete').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this._handleDelete(parseInt(btn.dataset.noteId));
+                this._handleDelete(btn.dataset.noteId);
             });
         });
     },
@@ -115,8 +115,11 @@ const Notes = {
     async _handleDelete(noteId) {
         if (!confirm('确定删除这条备注？')) return;
         try {
-            await API.deleteNote(noteId);
-            this.notes = this.notes.filter(n => n.id !== noteId);
+            const isLocal = typeof noteId === 'string' && noteId.startsWith('local_');
+            if (!isLocal) {
+                await API.deleteNote(noteId);
+            }
+            this.notes = this.notes.filter(n => String(n.id) !== String(noteId));
             this._updateToggleText();
             this._renderList();
             // 同步更新Browse的缓存

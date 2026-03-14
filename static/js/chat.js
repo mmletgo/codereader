@@ -27,6 +27,7 @@ const Chat = {
 
         // 加载历史
         await this._loadHistory();
+        this._updateSendState();
     },
 
     /** 关闭对话面板 */
@@ -104,6 +105,9 @@ const Chat = {
 
     /** 发送消息 */
     async send() {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            return; // 离线时不发送
+        }
         const textarea = document.getElementById('chat-input');
         const message = textarea.value.trim();
         if (!message || this.isSending) return;
@@ -149,8 +153,29 @@ const Chat = {
         }
     },
 
+    /** 更新发送按钮和输入框的离线状态 */
+    _updateSendState() {
+        const sendBtn = document.getElementById('chat-send-btn');
+        const textarea = document.getElementById('chat-input');
+        const isOffline = typeof Offline !== 'undefined' && !Offline.isOnline;
+
+        if (isOffline) {
+            sendBtn.disabled = true;
+            sendBtn.title = '需要网络连接';
+            textarea.placeholder = '离线模式，无法发送消息';
+        } else {
+            sendBtn.disabled = false;
+            sendBtn.title = '';
+            textarea.placeholder = '输入你的问题...';
+        }
+    },
+
     /** 重置对话 */
     async reset() {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            alert('离线模式不支持重置对话');
+            return;
+        }
         if (!confirm('确认清空当前函数的对话记录？')) return;
 
         try {
@@ -270,6 +295,10 @@ const Chat = {
             if (!Browse.currentDetail) return;
             this.open(Browse.currentDetail.id);
         });
+
+        // 监听网络状态变化，更新发送按钮状态
+        window.addEventListener('online', () => { if (this.isOpen) this._updateSendState(); });
+        window.addEventListener('offline', () => { if (this.isOpen) this._updateSendState(); });
 
         // visualViewport 适配虚拟键盘
         if (window.visualViewport) {

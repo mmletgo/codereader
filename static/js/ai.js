@@ -81,6 +81,9 @@ const AI = {
      * 强制刷新当前函数的AI解读
      */
     async refreshExplanation() {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            return;
+        }
         if (!Browse.currentDetail) return;
         const functionId = Browse.currentDetail.id;
         // 清除缓存，强制重新生成
@@ -125,6 +128,9 @@ const AI = {
      * @param {HTMLElement} lineEl - 行元素
      */
     async explainLine(functionId, lineNum, lineContent, lineEl) {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            return; // 离线不支持行级解释
+        }
         // 检查是否已有解释展开 → 切换关闭
         const existing = lineEl.nextElementSibling;
         if (existing && existing.classList.contains('line-ai-explanation')) {
@@ -154,6 +160,10 @@ const AI = {
      * @param {number} projectId
      */
     async generateNotes(functionId, projectId) {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            alert('离线模式不支持AI自动备注');
+            return;
+        }
         const btn = document.getElementById('btn-ai-notes');
         const originalText = btn.textContent;
         btn.disabled = true;

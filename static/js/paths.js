@@ -97,6 +97,12 @@ const Paths = {
 
     /** 创建阅读路径 */
     async _createPath() {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            const errorEl = document.getElementById('path-create-error');
+            errorEl.textContent = '离线模式不支持AI生成阅读路径';
+            errorEl.style.display = 'block';
+            return;
+        }
         const input = document.getElementById('input-path-query');
         const query = input.value.trim();
         const errorEl = document.getElementById('path-create-error');
@@ -185,6 +191,10 @@ const Paths = {
      * @param {number} pathId
      */
     async _deletePath(pathId) {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            alert('离线模式不支持删除路径');
+            return;
+        }
         if (!confirm('确认删除该阅读路径？')) return;
         try {
             await API.deleteReadingPath(pathId);

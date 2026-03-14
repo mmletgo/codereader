@@ -555,6 +555,10 @@ const Browse = {
         // 重置已读状态
         document.getElementById('btn-reset-read').addEventListener('click', async () => {
             document.getElementById('browse-menu').style.display = 'none';
+            if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+                alert('离线模式不支持重置已读状态');
+                return;
+            }
             if (!confirm('确认重置所有函数为未读状态？')) return;
             try {
                 await API.resetAllRead(this.projectId);
@@ -712,6 +716,10 @@ const Browse = {
 
     /** 重新扫描项目代码 */
     async _rescan() {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            alert('离线模式不支持重新扫描');
+            return;
+        }
         const overlay = document.getElementById('loading-overlay');
         overlay.style.display = 'flex';
         try {
