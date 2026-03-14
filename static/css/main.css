@@ -928,72 +928,11 @@ html, body {
     line-height: 1.4;
 }
 
-/* ========== Reading Path ========== */
-.reading-path-list {
-    max-height: 200px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.reading-path-item {
+/* ========== Browse Path Context ========== */
+.func-path-context {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
-    background: var(--bg-tertiary);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-    border: 1px solid transparent;
-}
-
-.reading-path-item:active {
-    border-color: var(--accent);
-}
-
-.reading-path-item.active {
-    border-color: var(--accent-success);
-}
-
-.reading-path-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.reading-path-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.reading-path-meta {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 2px;
-}
-
-.reading-path-delete {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 16px;
-    cursor: pointer;
-    padding: 4px 6px;
-    flex-shrink: 0;
-    border-radius: 4px;
-}
-
-.reading-path-delete:active {
-    color: var(--accent-danger);
-    background: rgba(248, 81, 73, 0.1);
-}
-
-.func-path-reason {
     margin-top: 6px;
     padding: 6px 10px;
     background: rgba(152, 195, 121, 0.1);
@@ -1002,6 +941,29 @@ html, body {
     font-size: 12px;
     color: var(--accent-success);
     line-height: 1.4;
+}
+
+.path-name-chip {
+    flex-shrink: 0;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: var(--accent-success);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.func-path-reason {
+    flex: 1;
+    min-width: 0;
+}
+
+.nav-btn-exit-path {
+    font-size: 13px;
+    padding: 0 10px;
+    color: var(--accent-danger);
+    background: rgba(248, 81, 73, 0.1);
 }
 
 /* ========== Paths Page ========== */
