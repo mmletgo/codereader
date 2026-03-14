@@ -115,6 +115,18 @@ CREATE TABLE IF NOT EXISTS ai_explanations (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(function_id)
 );
+
+CREATE TABLE IF NOT EXISTS reading_paths (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name          TEXT NOT NULL,
+    description   TEXT NOT NULL DEFAULT '',
+    function_items TEXT NOT NULL DEFAULT '[]',
+    last_index    INTEGER DEFAULT 0,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_reading_paths_project ON reading_paths(project_id);
 """
 
 
@@ -129,6 +141,25 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
     note_columns = [row["name"] for row in conn.execute("PRAGMA table_info(notes)").fetchall()]
     if "source" not in note_columns:
         conn.execute("ALTER TABLE notes ADD COLUMN source TEXT DEFAULT 'user'")
+
+    # 检查 reading_paths 表是否存在，不存在则创建
+    table_exists = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='reading_paths'"
+    ).fetchone()
+    if not table_exists:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS reading_paths (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                name          TEXT NOT NULL,
+                description   TEXT NOT NULL DEFAULT '',
+                function_items TEXT NOT NULL DEFAULT '[]',
+                last_index    INTEGER DEFAULT 0,
+                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_reading_paths_project ON reading_paths(project_id);
+        """)
 
 
 def init_db() -> None:

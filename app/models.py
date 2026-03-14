@@ -209,3 +209,40 @@ class AIAutoNotesRequest(BaseModel):
 
 class AIAutoNotesResponse(BaseModel):
     notes: list[NoteResponse]
+
+
+# ========== Reading Path ==========
+
+class ReadingPathCreate(BaseModel):
+    project_id: int
+    query: str
+
+
+class ReadingPathFunctionItem(BaseModel):
+    qualified_name: str
+    reason: str
+    function_id: int | None = None
+
+
+class ReadingPathListItem(BaseModel):
+    id: int
+    project_id: int
+    name: str
+    description: str
+    function_count: int
+    last_index: int
+    created_at: str
+
+
+class ReadingPathDetailResponse(BaseModel):
+    id: int
+    project_id: int
+    name: str
+    description: str
+    functions: list[ReadingPathFunctionItem]
+    last_index: int
+    created_at: str
+
+
+class ReadingPathProgressUpdate(BaseModel):
+    last_index: int

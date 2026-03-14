@@ -6,6 +6,7 @@
 - `notes.py` — `/api/v1/notes/` 备注增删改查
 - `call_graph.py` — `/api/v1/call_graph/` 调用关系图数据（D3.js兼容的nodes+links格式）
 - `export.py` — `/api/v1/export/` 导出阅后记录（JSON/Markdown格式）
+- `reading_paths.py` — `/api/v1/reading-paths/` AI阅读路径（生成、列表、详情、删除、进度更新）
 
 ## API设计规范
 - 所有路由使用 `APIRouter(prefix=..., tags=[...])`
@@ -46,3 +47,10 @@
 - `GET /explanation` — 获取/生成函数AI解读（function_id查询参数），带缓存（基于函数体SHA256哈希判断失效）
 - `POST /line-explain` — 行级代码解释（请求体：function_id, line_number, line_content）
 - `POST /auto-notes` — 生成AI自动备注（请求体：function_id, project_id），备注source='ai'
+
+### reading_paths.py
+- `POST /` — 创建阅读路径（AI生成），请求体：ReadingPathCreate(project_id, query)
+- `GET /` — 获取项目阅读路径列表，查询参数：project_id
+- `GET /{path_id}` — 获取阅读路径详情
+- `DELETE /{path_id}` — 删除阅读路径
+- `PUT /{path_id}/progress` — 更新阅读进度，请求体：ReadingPathProgressUpdate(last_index)
