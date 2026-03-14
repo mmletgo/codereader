@@ -64,6 +64,7 @@
 - DELETE /api/v1/notes/{id} — 删除备注
 - GET /api/v1/export/?project_id=X&format=json|markdown — 导出
 - PUT /api/v1/functions/{id}/read — 标记函数已读
+- PUT /api/v1/functions/reset-read?project_id=X — 重置项目所有函数已读状态
 - GET /api/v1/ai/explanation?function_id=X — 获取函数AI解读（带缓存）
 - POST /api/v1/ai/line-explain — 行级代码解释(body: {function_id, line_number, line_content})
 - POST /api/v1/ai/auto-notes — 生成AI自动备注(body: {function_id, project_id})

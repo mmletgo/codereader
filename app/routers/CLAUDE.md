@@ -26,6 +26,7 @@
 - `GET /` — 分页列表(project_id必须, page, per_page)，按sort_order ASC排序，附带note/caller/callee计数和is_read状态
 - `GET /{function_id}` — 详情含decorators(JSON解析)、is_read、callers、callees、notes
 - `PUT /{function_id}/read` — 标记函数为已读（设置is_read=1），不存在返回404
+- `PUT /reset-read?project_id=X` — 重置项目所有函数已读状态为未读
 - `GET /{function_id}/callers` — 返回list[FunctionBrief]
 - `GET /{function_id}/callees` — 返回list[FunctionBrief]
 

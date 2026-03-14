@@ -483,6 +483,27 @@ const Browse = {
             this._rescan();
         });
 
+        // 重置已读状态
+        document.getElementById('btn-reset-read').addEventListener('click', async () => {
+            document.getElementById('browse-menu').style.display = 'none';
+            if (!confirm('确认重置所有函数为未读状态？')) return;
+            try {
+                await API.resetAllRead(this.projectId);
+                // 更新本地缓存
+                this.functions.forEach(f => { f.is_read = false; });
+                this._unreadCount = this.functions.length;
+                // 更新当前函数详情缓存
+                for (const key of Object.keys(this.cache)) {
+                    if (this.cache[key]) this.cache[key].is_read = false;
+                }
+                // 刷新显示
+                this._updateNavInfo();
+                this._renderSidebarList();
+            } catch (e) {
+                alert('重置失败: ' + e.message);
+            }
+        });
+
         // 返回按钮
         document.getElementById('browse-back').addEventListener('click', () => {
             location.hash = '#/';

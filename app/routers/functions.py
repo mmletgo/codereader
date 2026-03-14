@@ -44,6 +44,20 @@ def mark_function_read(function_id: int) -> dict[str, str]:
         return {"message": "ok"}
 
 
+@router.put("/reset-read", status_code=200)
+def reset_all_read(
+    project_id: int = Query(..., description="项目ID"),
+) -> dict[str, str]:
+    """重置项目所有函数的已读状态为未读"""
+    with get_db() as conn:
+        execute(
+            conn,
+            "UPDATE functions SET is_read = 0 WHERE file_id IN (SELECT id FROM files WHERE project_id = ?)",
+            (project_id,),
+        )
+        return {"message": "ok"}
+
+
 @router.get("/{function_id}/callers", response_model=list[FunctionBrief])
 def get_function_callers(function_id: int) -> list[FunctionBrief]:
     """获取调用了指定函数的函数列表"""

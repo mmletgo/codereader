@@ -103,6 +103,11 @@ const API = {
         return this.request(`/functions/${functionId}/read`, { method: 'PUT' });
     },
 
+    /** 重置项目所有函数已读状态 */
+    async resetAllRead(projectId) {
+        return this.request(`/functions/reset-read?project_id=${projectId}`, { method: 'PUT' });
+    },
+
     // ========== Notes ==========
 
     /** 添加备注 */

@@ -17,6 +17,7 @@
 ## 函数已读状态
 - 已读状态直接存储在 functions 表的 `is_read` 列（BOOLEAN DEFAULT 0）
 - 标记已读：`PUT /api/v1/functions/{function_id}/read` 将 is_read 设为 1
+- 重置已读：`PUT /api/v1/functions/reset-read?project_id=X` 将项目所有函数 is_read 设为 0
 - 重新扫描时通过 qualified_name + body 比较恢复未变更函数的已读状态
 - reading_progress 表仅保存 last_function_id（阅读位置），不再追踪已读函数ID列表
 
