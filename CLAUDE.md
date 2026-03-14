@@ -30,6 +30,7 @@
 6. **AI辅助阅读**: 函数级AI解读（可折叠面板，带缓存和预加载）、行级代码解释（每行右侧?按钮）、AI自动备注生成
 7. **AI阅读路径**: 用户输入关注主题，AI从项目函数中选择相关函数并按推荐顺序排列成阅读路径，支持进度跟踪
 8. **AI对话**: 函数级AI对话，针对当前函数向AI提问，AI可使用工具（read_file/search_functions/get_call_relations）查阅项目代码，对话记录持久化到数据库，支持重置
+9. **离线缓存(PWA)**: 项目数据手动下载到IndexedDB供离线浏览，Service Worker缓存静态资源支持PWA离线启动，离线写操作（标记已读/备注/进度）入队列在网络恢复后自动同步，AI功能离线时自动禁用
 
 ## 数据流
 用户指定目录 → scanner扫描文件 → python_analyzer提取函数+调用 → call_resolver解析调用关系 → engine存入SQLite → API提供数据 → 前端渲染

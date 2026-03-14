@@ -7,25 +7,31 @@
 - `css/chat.css` — AI对话界面样式（覆盖层/侧面板、消息气泡、打字动画、输入区、Markdown渲染、导航按钮指示器）
 - `css/graph.css` — D3调用关系图节点/连线/缩放样式
 - `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar、阅读路径页双面板并排布局；≥1440px断点：更宽侧边栏、更大字体）
-- `js/app.js` — 应用入口，hash路由管理（6条路由规则），项目列表页渲染和创建/删除逻辑
-- `js/api.js` — API请求封装（统一fetch wrapper，自动分页加载getAllFunctions，markRead标记已读，阅读路径CRUD+进度更新）
+- `js/app.js` — 应用入口，hash路由管理（6条路由规则），项目列表页渲染和创建/删除逻辑，离线缓存系统初始化（CacheDB/Offline/SW），PWA安装引导，项目卡片缓存状态渲染与下载/删除操作
+- `js/api.js` — API请求封装（统一fetch wrapper带离线感知：GET请求在线缓存+离线回退IndexedDB，写操作离线入队列+本地更新+模拟响应，_pathToStore路径到IndexedDB store映射）
 - `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载、PC端侧边栏函数列表渲染与搜索、阅读路径模式激活/退出/进度跟踪，init()支持pathId参数通过URL传递路径状态）
 - `js/paths.js` — AI阅读路径管理页（路径列表/详情双面板切换、创建路径、查看详情、激活跳转浏览器、删除路径、PC端双面板并排布局感知）
 - `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
 - `js/ai.js` — AI辅助分析模块（函数解读面板展开/折叠、行级代码解释、AI自动备注生成、简单Markdown渲染、前端缓存+防重复请求）
 - `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存、AI备注显示AI标识）
 - `js/list.js` — 函数列表页（按文件分组、搜索debounce 300ms、点击跳转浏览器）
-- `js/chat.js` — AI对话模块（对话界面打开/关闭、消息渲染、发送/重置、打字指示器、预设问题、自动滚动、visualViewport虚拟键盘适配）
+- `js/chat.js` — AI对话模块（对话界面打开/关闭、消息渲染、发送/重置、打字指示器、预设问题、自动滚动、visualViewport虚拟键盘适配、离线时禁用发送）
 - `js/cache-db.js` — IndexedDB封装层（数据库codereader-cache，10个对象存储，通用CRUD、offlineOps队列、cacheMeta管理、按projectId索引批量删除）
+- `js/offline.js` — 离线管理模块（网络状态监听online/offline事件、离线操作队列入队、操作合并去重、同步引擎回放pending操作、同步结果Toast提示、离线状态指示器UI）
 - `js/cache-manager.js` — 缓存下载管理器（downloadProject并发下载项目全部数据到IndexedDB、deleteProjectCache清理、getCacheStatus/getCacheInfo状态查询、_runWithConcurrency并发控制器）
 - `js/export.js` — 导出页面（JSON/Markdown格式切换、预览缓存、Blob下载）
+- `css/offline.css` — 离线/PWA样式（PWA安装引导条、离线状态指示器、缓存进度条、缓存操作按钮、备注未同步标识、离线禁用态、同步Toast动画）
+- `sw.js` — Service Worker（静态资源预缓存、Cache-First策略、API请求放行、离线导航回退SPA入口）
+- `manifest.json` — PWA清单（应用名CodeReader、standalone显示模式、主题色、图标配置）
+- `icons/` — PWA图标（icon-192.png、icon-512.png）
 - `lib/` — 第三方库本地文件（highlight.min.js, highlight-python.min.js, d3.min.js, github-dark.min.css）
 
 ## 前端架构
 纯HTML/CSS/JS单页应用，hash路由，无构建步骤。
 - 6个视图section通过display:flex/none切换，App.route()根据location.hash分发
-- 全局对象：API、Browse、Notes、AI、Graph、List、Export、Paths、App
+- 全局对象：API、Browse、Notes、AI、Graph、List、Export、Paths、App、CacheDB、Offline、CacheManager
 - 模块间通信：Notes直接访问Browse.currentDetail和Browse.cache更新备注数据
+- 离线架构：CacheDB(IndexedDB封装) → API(离线感知读写) → Offline(队列+同步) → CacheManager(批量下载)，Service Worker独立处理静态资源缓存
 
 ## 6个视图路由
 - `#/` — 项目列表页（view-projects），卡片式布局，新建/删除项目
