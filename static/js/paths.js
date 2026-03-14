@@ -16,8 +16,22 @@ const Paths = {
         this.currentPathId = null;
         this._bindEvents();
         this._showListPanel();
+        this._clearDetail();
         await this._loadProject();
         await this._loadPathList();
+    },
+
+    /** 是否PC端宽屏 */
+    _isPC() {
+        return window.matchMedia('(min-width: 1024px)').matches;
+    },
+
+    /** 清空详情面板（PC端显示占位提示） */
+    _clearDetail() {
+        const emptyEl = document.getElementById('paths-detail-empty');
+        const contentEl = document.getElementById('paths-detail-content');
+        if (emptyEl) emptyEl.style.display = 'flex';
+        if (contentEl) contentEl.style.display = 'none';
     },
 
     /** 加载项目信息（项目名显示在top-bar） */
@@ -32,13 +46,17 @@ const Paths = {
     /** 切换到列表面板 */
     _showListPanel() {
         document.getElementById('paths-panel-list').style.display = '';
-        document.getElementById('paths-panel-detail').style.display = 'none';
+        if (!this._isPC()) {
+            document.getElementById('paths-panel-detail').style.display = 'none';
+        }
     },
 
     /** 切换到详情面板 */
     _showDetailPanel() {
-        document.getElementById('paths-panel-list').style.display = 'none';
         document.getElementById('paths-panel-detail').style.display = '';
+        if (!this._isPC()) {
+            document.getElementById('paths-panel-list').style.display = 'none';
+        }
     },
 
     /** 加载路径列表 */
@@ -116,6 +134,11 @@ const Paths = {
     async _showPathDetail(pathId) {
         this.currentPathId = pathId;
         this._showDetailPanel();
+        // 隐藏占位、显示内容
+        const emptyEl = document.getElementById('paths-detail-empty');
+        const contentEl = document.getElementById('paths-detail-content');
+        if (emptyEl) emptyEl.style.display = 'none';
+        if (contentEl) contentEl.style.display = '';
         const metaEl = document.getElementById('paths-detail-meta');
         const funcsEl = document.getElementById('paths-detail-funcs');
         const activateBtn = document.getElementById('btn-activate-path');
@@ -173,6 +196,7 @@ const Paths = {
             if (this.currentPathId === pathId) {
                 this.currentPathId = null;
                 this._showListPanel();
+                this._clearDetail();
             }
             await this._loadPathList();
         } catch (err) {
@@ -185,8 +209,7 @@ const Paths = {
      * @param {number} pathId
      */
     async _activateAndBrowse(pathId) {
-        await Browse.activateReadingPath(pathId);
-        location.hash = `#/project/${this.projectId}/browse`;
+        location.hash = `#/project/${this.projectId}/browse?path=${pathId}`;
     },
 
     /** 绑定事件（只绑定一次） */
@@ -224,6 +247,7 @@ const Paths = {
         document.getElementById('paths-detail-back').addEventListener('click', () => {
             this.currentPathId = null;
             this._showListPanel();
+            this._clearDetail();
             this._loadPathList();
         });
 
@@ -248,9 +272,7 @@ const Paths = {
             const funcId = parseInt(item.dataset.funcId);
             if (!funcId) return;
             if (this.currentPathId) {
-                Browse.activateReadingPath(this.currentPathId).then(() => {
-                    location.hash = `#/project/${this.projectId}/browse?func=${funcId}`;
-                });
+                location.hash = `#/project/${this.projectId}/browse?path=${this.currentPathId}&func=${funcId}`;
             }
         });
     },

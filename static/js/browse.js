@@ -26,8 +26,9 @@ const Browse = {
      * 初始化浏览器
      * @param {number} projectId
      * @param {number|null} funcId - 可选，直接跳转到指定函数
+     * @param {number|null} pathId - 可选，激活阅读路径
      */
-    async init(projectId, funcId) {
+    async init(projectId, funcId, pathId) {
         this.projectId = projectId;
         this.cache.clear();
         this.htmlCache.clear();
@@ -41,17 +42,28 @@ const Browse = {
         // 立即显示骨架屏
         this._showSkeleton();
 
-        // 并行发起三个API请求
+        // 并行发起API请求（路径模式时不需要加载progress）
         const [_, allFunctions, progress] = await Promise.all([
             this._loadProject(),
             API.getAllFunctions(projectId),
-            funcId ? Promise.resolve(null) : API.getProgress(projectId).catch(() => null),
+            (funcId || pathId) ? Promise.resolve(null) : API.getProgress(projectId).catch(() => null),
         ]);
         this.functions = allFunctions;
         this._unreadCount = this.functions.filter(f => !f.is_read).length;
         this._applyFilter();
 
-        // 恢复阅读进度（和原逻辑相同）
+        // 路径模式：激活路径后由 activateReadingPath 处理显示
+        if (pathId) {
+            await this.activateReadingPath(pathId);
+            // 如果同时指定了funcId，跳转到该函数
+            if (funcId) {
+                const idx = this.filteredFunctions.findIndex(f => f.id === funcId);
+                if (idx >= 0) await this.showFunction(idx);
+            }
+            return;
+        }
+
+        // 恢复阅读进度
         let resumeFuncId = funcId;
         if (!resumeFuncId && progress && progress.last_function_id) {
             resumeFuncId = progress.last_function_id;

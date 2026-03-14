@@ -10,6 +10,10 @@
     display: none;
 }
 
+.paths-layout {
+    display: contents;
+}
+
 @media (min-width: 1024px) {
     /* ========== General ========== */
     :root {
@@ -266,6 +270,33 @@
     }
 
     /* ========== Paths Page: PC two-column ========== */
+    .paths-layout {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    #paths-panel-list {
+        display: flex !important;
+        flex-direction: column;
+        width: 420px;
+        min-width: 420px;
+        border-right: 1px solid var(--border);
+        overflow-y: auto;
+    }
+
+    #paths-panel-detail {
+        display: flex !important;
+        flex-direction: column;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    /* PC端始终可见列表，隐藏返回按钮 */
+    #paths-detail-back {
+        display: none;
+    }
+
     .paths-card:hover {
         border-color: var(--accent);
         background: var(--bg-tertiary);

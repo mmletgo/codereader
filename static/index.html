@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CodeReader</title>
     <link rel="stylesheet" href="lib/atom-one-dark.min.css">
-    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/main.css?v=2">
     <link rel="stylesheet" href="css/code.css">
     <link rel="stylesheet" href="css/graph.css?v=2">
-    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/responsive.css?v=3">
 </head>
 <body>
     <!-- 视图1: 项目列表页 -->
@@ -180,38 +180,45 @@
             <span id="paths-project-name" class="top-bar-subtitle"></span>
         </header>
 
-        <!-- 面板A：路径列表（默认显示） -->
-        <div id="paths-panel-list" class="paths-panel">
-            <div class="paths-create-section">
-                <label class="input-label">描述你想了解的业务逻辑</label>
-                <input type="text" id="input-path-query" class="input"
-                       placeholder="如：实盘的策略逻辑、数据同步流程...">
-                <div id="path-create-error" class="error-msg" style="display:none;"></div>
-                <button id="btn-generate-path" class="btn btn-primary btn-block"
-                        style="margin-top:12px;">AI 生成阅读路径</button>
+        <div class="paths-layout">
+            <!-- 面板A：路径列表（默认显示） -->
+            <div id="paths-panel-list" class="paths-panel">
+                <div class="paths-create-section">
+                    <label class="input-label">描述你想了解的业务逻辑</label>
+                    <input type="text" id="input-path-query" class="input"
+                           placeholder="如：实盘的策略逻辑、数据同步流程...">
+                    <div id="path-create-error" class="error-msg" style="display:none;"></div>
+                    <button id="btn-generate-path" class="btn btn-primary btn-block"
+                            style="margin-top:12px;">AI 生成阅读路径</button>
+                </div>
+                <div id="path-generating" class="paths-generating" style="display:none;">
+                    <div class="spinner"></div>
+                    <span>AI 正在分析项目函数...</span>
+                </div>
+                <div class="paths-list-header">已有路径</div>
+                <div id="paths-list" class="paths-card-list"></div>
+                <div id="paths-empty" class="empty-state" style="display:none;">
+                    <p>还没有阅读路径</p>
+                    <p class="text-secondary">输入描述，让AI为你规划阅读顺序</p>
+                </div>
             </div>
-            <div id="path-generating" class="paths-generating" style="display:none;">
-                <div class="spinner"></div>
-                <span>AI 正在分析项目函数...</span>
-            </div>
-            <div class="paths-list-header">已有路径</div>
-            <div id="paths-list" class="paths-card-list"></div>
-            <div id="paths-empty" class="empty-state" style="display:none;">
-                <p>还没有阅读路径</p>
-                <p class="text-secondary">输入描述，让AI为你规划阅读顺序</p>
-            </div>
-        </div>
 
-        <!-- 面板B：路径详情（点击路径卡片后切换显示） -->
-        <div id="paths-panel-detail" class="paths-panel" style="display:none;">
-            <div class="paths-detail-header">
-                <button id="paths-detail-back" class="paths-detail-back-btn">&larr; 返回列表</button>
-                <button id="paths-detail-delete" class="btn btn-danger btn-sm">删除</button>
-            </div>
-            <div id="paths-detail-meta" class="paths-detail-meta"></div>
-            <div id="paths-detail-funcs" class="paths-func-list"></div>
-            <div class="paths-detail-actions">
-                <button id="btn-activate-path" class="btn btn-primary btn-block">开始阅读</button>
+            <!-- 面板B：路径详情（点击路径卡片后切换显示） -->
+            <div id="paths-panel-detail" class="paths-panel" style="display:none;">
+                <div id="paths-detail-empty" class="empty-state" style="display:none;">
+                    <p class="text-secondary">选择左侧路径查看详情</p>
+                </div>
+                <div id="paths-detail-content">
+                    <div class="paths-detail-header">
+                        <button id="paths-detail-back" class="paths-detail-back-btn">&larr; 返回列表</button>
+                        <button id="paths-detail-delete" class="btn btn-danger btn-sm">删除</button>
+                    </div>
+                    <div id="paths-detail-meta" class="paths-detail-meta"></div>
+                    <div id="paths-detail-funcs" class="paths-func-list"></div>
+                    <div class="paths-detail-actions">
+                        <button id="btn-activate-path" class="btn btn-primary btn-block">开始阅读</button>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -226,14 +233,14 @@
     <script src="lib/highlight-python.min.js"></script>
     <script src="lib/d3.min.js"></script>
     <!-- JS: 应用模块 -->
-    <script src="js/api.js?v=2"></script>
+    <script src="js/api.js?v=3"></script>
     <script src="js/notes.js"></script>
     <script src="js/ai.js"></script>
-    <script src="js/browse.js?v=2"></script>
-    <script src="js/paths.js"></script>
+    <script src="js/browse.js?v=4"></script>
+    <script src="js/paths.js?v=2"></script>
     <script src="js/graph.js?v=2"></script>
     <script src="js/list.js"></script>
     <script src="js/export.js"></script>
-    <script src="js/app.js?v=2"></script>
+    <script src="js/app.js?v=4"></script>
 </body>
 </html>

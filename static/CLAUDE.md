@@ -1,14 +1,15 @@
 # static/ - 前端静态文件
 
 ## 文件结构
-- `index.html` — SPA入口，引入所有CSS/JS，定义5个section视图容器和新建项目对话框
+- `index.html` — SPA入口，引入所有CSS/JS，定义6个section视图容器和新建项目对话框
 - `css/main.css` — 主样式（暗色主题变量、flex布局、触控44px最小高度、响应式组件）
 - `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖、行级调用按钮和展开区样式、骨架屏shimmer动画）
 - `css/graph.css` — D3调用关系图节点/连线/缩放样式
-- `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar；≥1440px断点：更宽侧边栏、更大字体）
-- `js/app.js` — 应用入口，hash路由管理（5条路由规则），项目列表页渲染和创建/删除逻辑
+- `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar、阅读路径页双面板并排布局；≥1440px断点：更宽侧边栏、更大字体）
+- `js/app.js` — 应用入口，hash路由管理（6条路由规则），项目列表页渲染和创建/删除逻辑
 - `js/api.js` — API请求封装（统一fetch wrapper，自动分页加载getAllFunctions，markRead标记已读，阅读路径CRUD+进度更新）
-- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载、PC端侧边栏函数列表渲染与搜索、AI阅读路径激活/退出/进度跟踪）
+- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载、PC端侧边栏函数列表渲染与搜索、阅读路径模式激活/退出/进度跟踪，init()支持pathId参数通过URL传递路径状态）
+- `js/paths.js` — AI阅读路径管理页（路径列表/详情双面板切换、创建路径、查看详情、激活跳转浏览器、删除路径、PC端双面板并排布局感知）
 - `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
 - `js/ai.js` — AI辅助分析模块（函数解读面板展开/折叠、行级代码解释、AI自动备注生成、简单Markdown渲染、前端缓存+防重复请求）
 - `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存、AI备注显示AI标识）
@@ -18,13 +19,14 @@
 
 ## 前端架构
 纯HTML/CSS/JS单页应用，hash路由，无构建步骤。
-- 5个视图section通过display:flex/none切换，App.route()根据location.hash分发
-- 全局对象：API、Browse、Notes、AI、Graph、List、Export、App
+- 6个视图section通过display:flex/none切换，App.route()根据location.hash分发
+- 全局对象：API、Browse、Notes、AI、Graph、List、Export、Paths、App
 - 模块间通信：Notes直接访问Browse.currentDetail和Browse.cache更新备注数据
 
-## 5个视图路由
+## 6个视图路由
 - `#/` — 项目列表页（view-projects），卡片式布局，新建/删除项目
-- `#/project/{id}/browse?func={funcId}` — 函数浏览器（view-browse），支持func参数直接跳转
+- `#/project/{id}/browse?func={funcId}&path={pathId}` — 函数浏览器（view-browse），支持func参数直接跳转、path参数激活阅读路径模式
+- `#/project/{id}/paths` — AI阅读路径管理（view-paths），创建/查看/激活阅读路径
 - `#/project/{id}/graph` — 调用关系图（view-graph），D3横向树
 - `#/project/{id}/list` — 函数列表（view-list），搜索+按文件分组
 - `#/project/{id}/export` — 导出（view-export），JSON/Markdown预览+下载
@@ -36,6 +38,9 @@
 - 超宽屏（≥1440px）：侧边栏扩展到320px
 - 项目列表页：PC端使用CSS Grid网格布局替代移动端的单列列表
 - hover效果：仅在PC端media query中定义，避免影响触控设备
+- 阅读路径页HTML结构：paths-layout(flex row) > paths-panel-list + paths-panel-detail
+- 移动端：paths-layout用display:contents透传布局，列表和详情面板通过JS切换display
+- PC端（≥1024px）：左侧420px列表面板（创建+路径列表），右侧详情面板（路径详情/占位提示），两面板始终可见（CSS !important覆盖JS inline style），隐藏"返回列表"按钮
 
 ## 移动端交互设计
 - 函数浏览：底部导航栏左右箭头按钮切换函数，上下滚动查看代码

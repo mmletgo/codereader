@@ -34,8 +34,9 @@ const App = {
             const projectId = parseInt(browseMatch[1]);
             const params = new URLSearchParams(hash.split('?')[1] || '');
             const funcId = params.get('func') ? parseInt(params.get('func')) : null;
+            const pathId = params.get('path') ? parseInt(params.get('path')) : null;
             this._showView('view-browse');
-            Browse.init(projectId, funcId);
+            Browse.init(projectId, funcId, pathId);
             return;
         }
 
