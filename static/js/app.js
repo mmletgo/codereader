@@ -3,7 +3,7 @@
  * 5个视图的路由切换和初始化
  */
 const App = {
-    views: ['view-projects', 'view-browse', 'view-graph', 'view-list', 'view-export'],
+    views: ['view-projects', 'view-browse', 'view-graph', 'view-list', 'view-export', 'view-paths'],
 
     /** 应用启动 */
     init() {
@@ -61,6 +61,14 @@ const App = {
             const projectId = parseInt(exportMatch[1]);
             this._showView('view-export');
             Export.init(projectId);
+            return;
+        }
+
+        const pathsMatch = hash.match(/^#\/project\/(\d+)\/paths$/);
+        if (pathsMatch) {
+            const projectId = parseInt(pathsMatch[1]);
+            this._showView('view-paths');
+            Paths.init(projectId);
             return;
         }
 

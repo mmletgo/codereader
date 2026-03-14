@@ -223,15 +223,16 @@ const Browse = {
         const fileInfo = `\u{1F4C4} ${detail.file_path}:${detail.start_line}-${detail.end_line}`;
         document.getElementById('func-file-info').textContent = fileInfo;
 
-        // 显示阅读路径理由
-        const reasonEl = document.getElementById('func-path-reason');
-        if (reasonEl) {
+        // 显示阅读路径上下文
+        const ctxEl = document.getElementById('func-path-context');
+        if (ctxEl) {
             const func = this.filteredFunctions[this.currentIndex];
             if (this.activeReadingPath && func && func._pathReason) {
-                reasonEl.textContent = func._pathReason;
-                reasonEl.style.display = 'block';
+                document.getElementById('path-name-chip').textContent = this.activeReadingPath.name;
+                document.getElementById('func-path-reason').textContent = func._pathReason;
+                ctxEl.style.display = '';
             } else {
-                reasonEl.style.display = 'none';
+                ctxEl.style.display = 'none';
             }
         }
     },
@@ -379,6 +380,12 @@ const Browse = {
         document.getElementById('nav-counter').textContent = label;
         document.getElementById('btn-prev').disabled = this.currentIndex <= 0;
         document.getElementById('btn-next').disabled = this.currentIndex >= total - 1;
+
+        // 退出路径按钮可见性
+        const exitBtn = document.getElementById('btn-exit-path');
+        if (exitBtn) {
+            exitBtn.style.display = this.activeReadingPath ? '' : 'none';
+        }
     },
 
     /** 显示骨架屏加载占位 */
@@ -548,60 +555,20 @@ const Browse = {
             }
         });
 
-        // 阅读路径按钮
+        // 阅读路径 → 跳转路径管理页
         document.getElementById('btn-reading-paths').addEventListener('click', () => {
             document.getElementById('browse-menu').style.display = 'none';
-            this._showReadingPathsDialog();
+            location.hash = `#/project/${this.projectId}/paths`;
         });
 
-        // 阅读路径对话框 - 生成
-        document.getElementById('btn-generate-path').addEventListener('click', () => {
-            this._createReadingPath();
+        // 路径页入口（底部导航）
+        document.getElementById('btn-goto-paths').addEventListener('click', () => {
+            location.hash = `#/project/${this.projectId}/paths`;
         });
 
-        // 阅读路径对话框 - 输入框回车
-        document.getElementById('input-path-query').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this._createReadingPath();
-            }
-        });
-
-        // 阅读路径对话框 - 关闭
-        document.getElementById('btn-close-reading-paths').addEventListener('click', () => {
-            document.getElementById('dialog-reading-paths').style.display = 'none';
-        });
-
-        // 阅读路径对话框 - 退出当前路径
-        document.getElementById('btn-deactivate-path').addEventListener('click', () => {
-            document.getElementById('dialog-reading-paths').style.display = 'none';
+        // 退出路径模式
+        document.getElementById('btn-exit-path').addEventListener('click', () => {
             this.deactivateReadingPath();
-        });
-
-        // 阅读路径对话框 - 背景点击关闭
-        document.getElementById('dialog-reading-paths').addEventListener('click', (e) => {
-            if (e.target.classList.contains('dialog-overlay')) {
-                e.target.style.display = 'none';
-            }
-        });
-
-        // 阅读路径列表 - 点击激活或删除
-        document.getElementById('reading-path-list').addEventListener('click', (e) => {
-            // 删除按钮
-            const deleteBtn = e.target.closest('.reading-path-delete');
-            if (deleteBtn) {
-                e.stopPropagation();
-                const pathId = parseInt(deleteBtn.dataset.pathId);
-                this._deleteReadingPath(pathId);
-                return;
-            }
-            // 点击路径项 - 激活
-            const item = e.target.closest('.reading-path-item');
-            if (item) {
-                const pathId = parseInt(item.dataset.pathId);
-                document.getElementById('dialog-reading-paths').style.display = 'none';
-                this.activateReadingPath(pathId);
-            }
         });
 
         // 返回按钮
@@ -897,92 +864,6 @@ const Browse = {
             }
         }
         this._updateNav();
-    },
-
-    /** 打开阅读路径对话框 */
-    async _showReadingPathsDialog() {
-        const dialog = document.getElementById('dialog-reading-paths');
-        dialog.style.display = 'flex';
-        // 清空输入
-        document.getElementById('input-path-query').value = '';
-        document.getElementById('path-create-error').style.display = 'none';
-        // 显示/隐藏退出按钮
-        const deactivateBtn = document.getElementById('btn-deactivate-path');
-        deactivateBtn.style.display = this.activeReadingPath ? '' : 'none';
-        // 加载路径列表
-        await this._loadReadingPathList();
-    },
-
-    /** 加载阅读路径列表到对话框 */
-    async _loadReadingPathList() {
-        const listEl = document.getElementById('reading-path-list');
-        try {
-            const paths = await API.getReadingPaths(this.projectId);
-            if (paths.length === 0) {
-                listEl.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;">暂无阅读路径，输入描述生成一个吧</div>';
-                return;
-            }
-            const activeId = this.activeReadingPath ? this.activeReadingPath.id : null;
-            let html = '';
-            for (const p of paths) {
-                const isActive = p.id === activeId;
-                html += `<div class="reading-path-item${isActive ? ' active' : ''}" data-path-id="${p.id}">
-                <div class="reading-path-info">
-                    <div class="reading-path-name">${this._escapeHtml(p.name)}</div>
-                    <div class="reading-path-meta">${p.function_count} 个函数 · 已读到 ${p.last_index + 1}/${p.function_count}${isActive ? ' · 当前激活' : ''}</div>
-                </div>
-                <button class="reading-path-delete" data-path-id="${p.id}" title="删除">✕</button>
-            </div>`;
-            }
-            listEl.innerHTML = html;
-        } catch (err) {
-            listEl.innerHTML = `<div style="color:var(--accent-danger);font-size:13px;">加载失败: ${err.message}</div>`;
-        }
-    },
-
-    /** 创建阅读路径 */
-    async _createReadingPath() {
-        const query = document.getElementById('input-path-query').value.trim();
-        const errorEl = document.getElementById('path-create-error');
-        if (!query) {
-            errorEl.textContent = '请输入你想了解的业务逻辑描述';
-            errorEl.style.display = 'block';
-            return;
-        }
-        errorEl.style.display = 'none';
-        const btn = document.getElementById('btn-generate-path');
-        const oldText = btn.textContent;
-        btn.textContent = 'AI 分析中...';
-        btn.disabled = true;
-        try {
-            const path = await API.createReadingPath(this.projectId, query);
-            // 关闭对话框
-            document.getElementById('dialog-reading-paths').style.display = 'none';
-            // 自动激活
-            await this.activateReadingPath(path.id);
-        } catch (err) {
-            errorEl.textContent = '生成失败: ' + err.message;
-            errorEl.style.display = 'block';
-        } finally {
-            btn.textContent = oldText;
-            btn.disabled = false;
-        }
-    },
-
-    /** 删除阅读路径 */
-    async _deleteReadingPath(pathId) {
-        if (!confirm('确认删除该阅读路径？')) return;
-        try {
-            await API.deleteReadingPath(pathId);
-            // 如果删除的是当前激活的路径，取消激活
-            if (this.activeReadingPath && this.activeReadingPath.id === pathId) {
-                this.deactivateReadingPath();
-            }
-            // 刷新列表
-            await this._loadReadingPathList();
-        } catch (err) {
-            alert('删除失败: ' + err.message);
-        }
     },
 
     /** HTML转义 */
