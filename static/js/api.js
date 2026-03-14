@@ -1,17 +1,20 @@
 /**
  * API 请求封装模块
  * 所有后端API调用统一通过此模块
+ * 支持离线感知：在线时缓存数据到IndexedDB，离线时从缓存读取
  */
 const API = {
     BASE: '/api/v1',
 
+    // ========== 核心请求方法 ==========
+
     /**
-     * 通用请求方法
+     * 纯网络请求（不做离线处理）
      * @param {string} path - API路径（不含BASE前缀）
      * @param {object} options - fetch选项
      * @returns {Promise<any>}
      */
-    async request(path, options = {}) {
+    async _fetch(path, options = {}) {
         const url = this.BASE + path;
         const config = {
             headers: { 'Content-Type': 'application/json' },
@@ -28,10 +31,355 @@ const API = {
             }
             throw new Error(detail || `HTTP ${resp.status}`);
         }
-        // 对于204 No Content等，不解析JSON
         if (resp.status === 204) return null;
         const text = await resp.text();
         return text ? JSON.parse(text) : null;
+    },
+
+    /**
+     * 通用请求方法（带离线感知）
+     * @param {string} path - API路径（不含BASE前缀）
+     * @param {object} options - fetch选项
+     * @returns {Promise<any>}
+     */
+    async request(path, options = {}) {
+        const method = (options.method || 'GET').toUpperCase();
+        const online = typeof Offline === 'undefined' || Offline.isOnline;
+
+        if (method === 'GET') {
+            if (online) {
+                // 在线：尝试网络请求
+                try {
+                    const data = await this._fetch(path, options);
+                    // 异步更新缓存（fire-and-forget）
+                    this._updateCache(path, data);
+                    return data;
+                } catch (e) {
+                    // 网络错误时尝试从缓存读取
+                    const cached = await this._readCache(path);
+                    if (cached !== null && cached !== undefined) {
+                        return cached;
+                    }
+                    throw e;
+                }
+            } else {
+                // 离线：从缓存读取
+                const cached = await this._readCache(path);
+                if (cached !== null && cached !== undefined) {
+                    return cached;
+                }
+                throw new Error('离线模式，无缓存数据');
+            }
+        } else {
+            // 写操作 (POST/PUT/DELETE)
+            if (online) {
+                const data = await this._fetch(path, options);
+                // 异步更新缓存（fire-and-forget）
+                this._updateCacheAfterWrite(path, method, options.body, data);
+                return data;
+            } else {
+                return this._handleOfflineWrite(path, method, options);
+            }
+        }
+    },
+
+    // ========== 缓存路由解析 ==========
+
+    /**
+     * 解析API路径，返回IndexedDB store信息
+     * @param {string} path - API路径（可含查询参数）
+     * @returns {{store: string, type: string, key?: *, indexName?: string, indexValue?: *}|null}
+     */
+    _pathToStore(path) {
+        /** @type {RegExpMatchArray|null} */
+        let m;
+
+        // GET /functions/?project_id=X → functions列表
+        m = path.match(/^\/functions\/\?project_id=(\d+)/);
+        if (m) {
+            return { store: 'functions', type: 'list', indexName: 'projectId', indexValue: parseInt(m[1]) };
+        }
+
+        // GET /functions/{id} → 函数详情
+        m = path.match(/^\/functions\/(\d+)$/);
+        if (m) {
+            return { store: 'functionDetails', type: 'single', key: parseInt(m[1]) };
+        }
+
+        // GET /ai/explanation?function_id=X → AI解读
+        m = path.match(/^\/ai\/explanation\?function_id=(\d+)/);
+        if (m) {
+            return { store: 'aiExplanations', type: 'single', key: parseInt(m[1]) };
+        }
+
+        // GET /call_graph/?project_id=X → 调用关系图
+        m = path.match(/^\/call_graph\/\?project_id=(\d+)/);
+        if (m) {
+            return { store: 'callGraphs', type: 'single', key: parseInt(m[1]) };
+        }
+
+        // GET /reading-paths/?project_id=X → 阅读路径列表
+        m = path.match(/^\/reading-paths\/\?project_id=(\d+)/);
+        if (m) {
+            return { store: 'readingPaths', type: 'list', indexName: 'projectId', indexValue: parseInt(m[1]) };
+        }
+
+        // GET /reading-paths/{id} → 阅读路径详情
+        m = path.match(/^\/reading-paths\/(\d+)$/);
+        if (m) {
+            return { store: 'readingPaths', type: 'single', key: parseInt(m[1]) };
+        }
+
+        // GET /progress/?project_id=X → 阅读进度
+        m = path.match(/^\/progress\/\?project_id=(\d+)/);
+        if (m) {
+            return { store: 'progress', type: 'single', key: parseInt(m[1]) };
+        }
+
+        // GET /ai/chat?function_id=X → 对话历史
+        m = path.match(/^\/ai\/chat\?function_id=(\d+)/);
+        if (m) {
+            return { store: 'chatHistories', type: 'single', key: parseInt(m[1]) };
+        }
+
+        // GET /projects/ → 项目列表
+        if (/^\/projects\/$/.test(path)) {
+            return { store: 'projects', type: 'all' };
+        }
+
+        // 未匹配
+        return null;
+    },
+
+    // ========== 缓存读写 ==========
+
+    /**
+     * 从IndexedDB读取缓存数据
+     * @param {string} path - API路径
+     * @returns {Promise<*>}
+     */
+    async _readCache(path) {
+        if (typeof CacheDB === 'undefined' || !CacheDB._db) return null;
+
+        const route = this._pathToStore(path);
+        if (!route) return null;
+
+        try {
+            if (route.type === 'single') {
+                return await CacheDB.get(route.store, route.key);
+            } else if (route.type === 'list') {
+                const items = await CacheDB.getAllByIndex(route.store, route.indexName, route.indexValue);
+                // GET /functions/ 返回 {items, total} 格式
+                if (route.store === 'functions') {
+                    return { items: items || [], total: (items || []).length };
+                }
+                return items;
+            } else if (route.type === 'all') {
+                return await CacheDB.getAll(route.store);
+            }
+        } catch (e) {
+            console.warn('Cache read failed:', e);
+        }
+        return null;
+    },
+
+    /**
+     * GET请求成功后异步更新IndexedDB缓存
+     * @param {string} path - API路径
+     * @param {*} data - 响应数据
+     * @returns {Promise<void>}
+     */
+    async _updateCache(path, data) {
+        if (typeof CacheDB === 'undefined' || !CacheDB._db) return;
+
+        try {
+            const route = this._pathToStore(path);
+            if (!route || !data) return;
+
+            if (route.type === 'single') {
+                // 对 functionDetails，需要附加 projectId
+                if (route.store === 'functionDetails' && typeof Browse !== 'undefined' && Browse.projectId) {
+                    data.projectId = Browse.projectId;
+                }
+                await CacheDB.put(route.store, data);
+            } else if (route.type === 'list') {
+                // 列表数据，批量存储
+                const items = Array.isArray(data) ? data : (data.items || []);
+                if (items.length > 0 && route.indexValue) {
+                    items.forEach(item => { item.projectId = route.indexValue; });
+                }
+                await CacheDB.putMany(route.store, items);
+            } else if (route.type === 'all') {
+                if (Array.isArray(data)) {
+                    await CacheDB.putMany(route.store, data);
+                }
+            }
+        } catch (e) {
+            console.warn('Cache update failed:', e);
+        }
+    },
+
+    /**
+     * 写操作成功后异步更新缓存（预留扩展点）
+     * @param {string} path - API路径
+     * @param {string} method - HTTP方法
+     * @param {string|undefined} body - 请求体
+     * @param {*} data - 响应数据
+     * @returns {Promise<void>}
+     */
+    async _updateCacheAfterWrite(path, method, body, data) {
+        // 写操作后的缓存更新逻辑
+        // 目前大部分写操作的缓存更新由前端页面刷新时自然完成
+        // 此方法作为扩展点，后续可按需添加特定写操作的缓存更新
+    },
+
+    // ========== 离线写操作处理 ==========
+
+    /**
+     * 离线时处理写操作：更新本地缓存并将操作入队
+     * @param {string} path - API路径
+     * @param {string} method - HTTP方法
+     * @param {object} options - fetch选项
+     * @returns {Promise<*>}
+     */
+    async _handleOfflineWrite(path, method, options) {
+        const body = options.body ? JSON.parse(options.body) : null;
+
+        // PUT /functions/{id}/read → mark_read
+        if (/^\/functions\/(\d+)\/read$/.test(path)) {
+            const funcId = parseInt(RegExp.$1);
+            // 更新 IndexedDB 中的函数详情
+            const detail = await CacheDB.get('functionDetails', funcId);
+            if (detail) {
+                detail.is_read = true;
+                await CacheDB.put('functionDetails', detail);
+            }
+            // 更新 functions 列表中的状态
+            const func = await CacheDB.get('functions', funcId);
+            if (func) {
+                func.is_read = true;
+                await CacheDB.put('functions', func);
+            }
+            // 入队列
+            await Offline.queueOperation({
+                projectId: (detail && detail.projectId) || (typeof Browse !== 'undefined' ? Browse.projectId : null),
+                type: 'mark_read',
+                path: path,
+                method: method,
+                body: null,
+                localId: null,
+            });
+            return null;
+        }
+
+        // POST /notes/ → add_note
+        if (path === '/notes/' && method === 'POST') {
+            const localId = 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+            const mockNote = {
+                id: localId,
+                function_id: body.function_id,
+                project_id: body.project_id,
+                content: body.content,
+                note_type: body.note_type,
+                source: 'user',
+                created_at: new Date().toISOString(),
+                _isLocal: true,
+            };
+            // 更新 functionDetails 中的 notes 数组
+            const detail = await CacheDB.get('functionDetails', body.function_id);
+            if (detail) {
+                if (!detail.notes) detail.notes = [];
+                detail.notes.push(mockNote);
+                await CacheDB.put('functionDetails', detail);
+            }
+            // 入队列
+            await Offline.queueOperation({
+                projectId: body.project_id,
+                type: 'add_note',
+                path: path,
+                method: method,
+                body: body,
+                localId: localId,
+            });
+            return mockNote;
+        }
+
+        // PUT /notes/{id} → update_note
+        const noteUpdateMatch = path.match(/^\/notes\/(\d+)$/);
+        if (noteUpdateMatch && method === 'PUT') {
+            const noteId = parseInt(noteUpdateMatch[1]);
+            await Offline.queueOperation({
+                projectId: typeof Browse !== 'undefined' ? Browse.projectId : null,
+                type: 'update_note',
+                path: path,
+                method: method,
+                body: body,
+                localId: null,
+            });
+            return { id: noteId, ...body };
+        }
+
+        // DELETE /notes/{id} → delete_note
+        const noteDeleteMatch = path.match(/^\/notes\/(\d+|local_\w+)$/);
+        if (noteDeleteMatch && method === 'DELETE') {
+            const noteId = noteDeleteMatch[1];
+            // 从 functionDetails 的 notes 数组中移除
+            if (typeof Browse !== 'undefined' && Browse.currentDetail) {
+                const detail = await CacheDB.get('functionDetails', Browse.currentDetail.id);
+                if (detail && detail.notes) {
+                    detail.notes = detail.notes.filter(n => String(n.id) !== String(noteId));
+                    await CacheDB.put('functionDetails', detail);
+                }
+            }
+            await Offline.queueOperation({
+                projectId: typeof Browse !== 'undefined' ? Browse.projectId : null,
+                type: 'delete_note',
+                path: path,
+                method: method,
+                body: null,
+                localId: noteId.startsWith?.('local_') ? noteId : null,
+            });
+            return null;
+        }
+
+        // PUT /progress/?project_id=X → save_progress
+        if (/^\/progress\/\?project_id=(\d+)$/.test(path) && method === 'PUT') {
+            const projectId = parseInt(RegExp.$1);
+            const progress = { projectId, ...body };
+            await CacheDB.put('progress', progress);
+            await Offline.queueOperation({
+                projectId: projectId,
+                type: 'save_progress',
+                path: path,
+                method: method,
+                body: body,
+                localId: null,
+            });
+            return null;
+        }
+
+        // PUT /reading-paths/{id}/progress → update_path_progress
+        const pathProgressMatch = path.match(/^\/reading-paths\/(\d+)\/progress$/);
+        if (pathProgressMatch && method === 'PUT') {
+            const pathId = parseInt(pathProgressMatch[1]);
+            const existing = await CacheDB.get('readingPaths', pathId);
+            if (existing) {
+                existing.last_index = body.last_index;
+                await CacheDB.put('readingPaths', existing);
+            }
+            await Offline.queueOperation({
+                projectId: typeof Browse !== 'undefined' ? Browse.projectId : null,
+                type: 'update_path_progress',
+                path: path,
+                method: method,
+                body: body,
+                localId: null,
+            });
+            return null;
+        }
+
+        // 其他写操作在离线时不支持
+        throw new Error('离线模式不支持此操作');
     },
 
     // ========== Projects ==========
@@ -79,6 +427,12 @@ const API = {
      * @returns {Promise<Array>} 所有函数的基本信息列表
      */
     async getAllFunctions(projectId) {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            // 离线：直接从 IndexedDB 查全部
+            const items = await CacheDB.getAllByIndex('functions', 'projectId', projectId);
+            return items || [];
+        }
+        // 在线：原逻辑（分页加载）
         const allItems = [];
         let page = 1;
         const perPage = 200;
@@ -170,6 +524,9 @@ const API = {
 
     /** 获取导出文本（Markdown格式，不做JSON解析） */
     async getExportText(projectId) {
+        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            throw new Error('离线模式不支持导出功能');
+        }
         const url = `${this.BASE}/export/?project_id=${projectId}&format=markdown`;
         const resp = await fetch(url);
         if (!resp.ok) {
