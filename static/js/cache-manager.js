@@ -45,6 +45,9 @@ const CacheManager = {
     async _doDownload(projectId, onProgress) {
         const progress = onProgress || (() => {});
 
+        // 批量下载模式：跳过API层的服务器可达性判断，避免单个请求失败导致级联失败
+        API._bulkDownloading = true;
+
         // 1. 设置 cacheMeta 状态为 downloading
         await CacheDB.setCacheMeta(projectId, {
             status: 'downloading',
@@ -68,35 +71,94 @@ const CacheManager = {
             await CacheDB.putMany('functions', funcsWithProject);
             progress(funcs.length, funcs.length, 'functions');
 
-            // 4. 并发下载所有函数详情（并发控制=5）
+            // 4. 并发下载所有函数详情（并发控制=5，跳过已缓存项以支持断点续传）
             let detailCompleted = 0;
             const totalFuncs = funcs.length;
             const detailTasks = funcs.map(f => () =>
-                API.getFunctionDetail(f.id).then(async (detail) => {
-                    detail.projectId = projectId;
-                    await CacheDB.put('functionDetails', detail);
-                    detailCompleted++;
-                    progress(detailCompleted, totalFuncs, 'details');
+                CacheDB.get('functionDetails', f.id).then(existing => {
+                    if (existing) {
+                        detailCompleted++;
+                        progress(detailCompleted, totalFuncs, 'details');
+                        return;
+                    }
+                    return API.getFunctionDetail(f.id).then(async (detail) => {
+                        detail.projectId = projectId;
+                        await CacheDB.put('functionDetails', detail);
+                        detailCompleted++;
+                        progress(detailCompleted, totalFuncs, 'details');
+                    });
                 })
             );
             await this._runWithConcurrency(detailTasks, 5);
 
-            // 5. 并发下载每个函数的AI解读（并发控制=5），忽略失败
+            // 5. 下载/生成每个函数的AI解读（并发控制=5，跳过已缓存项），忽略失败
+            //    先查询后端缓存状态，区分"下载已有"和"生成新的"两个阶段
             let extrasCompleted = 0;
-            const totalExtras = funcs.length;
-            const aiTasks = funcs.map(f => () =>
-                API.getAIExplanation(f.id).then(async (data) => {
-                    data.projectId = projectId;
-                    data.functionId = f.id;
-                    await CacheDB.put('aiExplanations', data);
-                }).catch(() => {
-                    // 忽略失败（可能未生成过）
-                }).finally(() => {
-                    extrasCompleted++;
-                    progress(extrasCompleted, totalExtras, 'extras');
+            /** @type {Set<number>} */
+            let serverCachedIds = new Set();
+            try {
+                const status = await API.getAIExplanationStatus(projectId);
+                serverCachedIds = new Set(status.cached_function_ids);
+            } catch (e) {
+                // 接口不可用，全部当作需要生成
+            }
+            const needFetch = [];
+            const needGenerate = [];
+            for (const f of funcs) {
+                if (serverCachedIds.has(f.id)) {
+                    needFetch.push(f);
+                } else {
+                    needGenerate.push(f);
+                }
+            }
+
+            // 5a. 并发5下载后端已缓存的AI解读
+            const fetchTotal = needFetch.length;
+            let fetchDone = 0;
+            progress(0, fetchTotal, 'ai-fetch');
+            const fetchTasks = needFetch.map(f => () =>
+                CacheDB.get('aiExplanations', f.id).then(existing => {
+                    if (existing) {
+                        fetchDone++;
+                        progress(fetchDone, fetchTotal, 'ai-fetch');
+                        return;
+                    }
+                    return API.getAIExplanation(f.id).then(async (data) => {
+                        data.projectId = projectId;
+                        data.functionId = f.id;
+                        await CacheDB.put('aiExplanations', data);
+                    }).catch(() => {}).finally(() => {
+                        fetchDone++;
+                        progress(fetchDone, fetchTotal, 'ai-fetch');
+                    });
                 })
             );
-            await this._runWithConcurrency(aiTasks, 5);
+            await this._runWithConcurrency(fetchTasks, 5);
+
+            // 5b. 并发1逐个生成后端未缓存的AI解读
+            const genTotal = needGenerate.length;
+            let genDone = 0;
+            if (genTotal > 0) {
+                progress(0, genTotal, 'ai-generate');
+            }
+            const genTasks = needGenerate.map(f => () =>
+                CacheDB.get('aiExplanations', f.id).then(existing => {
+                    if (existing) {
+                        genDone++;
+                        progress(genDone, genTotal, 'ai-generate');
+                        return;
+                    }
+                    return API.getAIExplanation(f.id).then(async (data) => {
+                        data.projectId = projectId;
+                        data.functionId = f.id;
+                        await CacheDB.put('aiExplanations', data);
+                    }).catch(() => {}).finally(() => {
+                        genDone++;
+                        progress(genDone, genTotal, 'ai-generate');
+                    });
+                })
+            );
+            await this._runWithConcurrency(genTasks, 3);
 
             // 6-9. 并行下载调用关系图、阅读路径、阅读进度、AI对话记录
             await Promise.all([
@@ -153,6 +215,8 @@ const CacheManager = {
                 error: err.message,
             });
             throw err;
+        } finally {
+            API._bulkDownloading = false;
         }
     },
 
@@ -345,6 +409,9 @@ const CacheManager = {
      * @returns {Promise<void>}
      */
     async _doBrowsePrefetch(projectId, functions) {
+        // 批量下载模式：跳过API层的服务器可达性判断
+        API._bulkDownloading = true;
+
         // 设置 cacheMeta = downloading
         await CacheDB.setCacheMeta(projectId, {
             status: 'downloading',
@@ -520,6 +587,7 @@ const CacheManager = {
             });
             throw err;
         } finally {
+            API._bulkDownloading = false;
             if (!this._bgAbort) {
                 this._updateBrowseProgress();
                 setTimeout(() => this._hideBrowseProgress(), 3000);

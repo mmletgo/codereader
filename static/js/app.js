@@ -397,14 +397,22 @@ const App = {
         statusEl.innerHTML = '<div class="cache-progress"><div class="cache-progress-bar" style="width:0%"></div></div><span class="cache-progress-text">准备下载...</span>';
 
         try {
+            const phaseLabels = { functions: '函数列表', details: '函数详情', 'ai-fetch': '下载AI解读', 'ai-generate': '生成AI解读' };
             await CacheManager.downloadProject(projectId, (current, total, phase) => {
                 const pct = total > 0 ? Math.round(current / total * 100) : 0;
                 const bar = statusEl.querySelector('.cache-progress-bar');
                 const text = statusEl.querySelector('.cache-progress-text');
                 if (bar) bar.style.width = pct + '%';
-                if (text) text.textContent = '缓存中... ' + current + '/' + total + ' (' + pct + '%)';
+                const label = phaseLabels[phase] || phase;
+                if (text) text.textContent = label + ' ' + current + '/' + total + ' (' + pct + '%)';
             });
             this._loadProjects(); // 刷新列表
+            // 下载完成后执行推迟的热更新reload
+            if (this._hotUpdatePending) {
+                console.info('[HotUpdate] 缓存下载完成，执行推迟的重载');
+                location.reload();
+                return;
+            }
         } catch (err) {
             statusEl.innerHTML = '<span class="cache-warning">下载失败: ' + err.message + '</span> <button class="cache-btn-download" data-project-id="' + projectId + '">重试</button>';
             // 重新绑定按钮
@@ -524,8 +532,14 @@ const App = {
 
         if (downloadCount > 0) {
             localStorage.setItem('hot-update-version', serverVersion);
-            console.info('[HotUpdate] 已更新', downloadCount, '个文件，重载页面');
-            location.reload();
+            // 缓存下载进行中时推迟reload，避免中断下载
+            if (typeof CacheManager !== 'undefined' && (CacheManager._downloadingMap.size > 0 || API._bulkDownloading)) {
+                console.info('[HotUpdate] 已更新', downloadCount, '个文件，等待缓存下载完成后重载');
+                this._hotUpdatePending = true;
+            } else {
+                console.info('[HotUpdate] 已更新', downloadCount, '个文件，重载页面');
+                location.reload();
+            }
         }
     },
 

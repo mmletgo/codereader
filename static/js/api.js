@@ -14,6 +14,8 @@ const API = {
     _SERVER_RETRY_INTERVAL: 30000,
     /** @type {number} 网络请求超时时间（毫秒） */
     _FETCH_TIMEOUT: 8000,
+    /** @type {boolean} 批量下载模式：跳过服务器可达性判断，避免单个请求失败导致级联失败 */
+    _bulkDownloading: false,
 
     // ========== 核心请求方法 ==========
 
@@ -25,6 +27,7 @@ const API = {
     _shouldTryServer() {
         const online = typeof Offline === 'undefined' || Offline.isOnline;
         if (!online) return false;
+        if (this._bulkDownloading) return true;
         if (this._serverReachable) return true;
         return Date.now() - this._lastServerFailTime > this._SERVER_RETRY_INTERVAL;
     },
@@ -140,7 +143,9 @@ const API = {
                     this._updateCache(path, data);
                     return data;
                 } catch (e) {
-                    this._markServerUnreachable();
+                    if (!this._bulkDownloading) {
+                        this._markServerUnreachable();
+                    }
                     // 网络错误时尝试从缓存读取
                     const cached = await this._readCache(path);
                     if (cached !== null && cached !== undefined) {
@@ -170,7 +175,9 @@ const API = {
                         // 超时不代表服务器不可达（如AI操作耗时较长），直接抛出
                         throw e;
                     }
-                    this._markServerUnreachable();
+                    if (!this._bulkDownloading) {
+                        this._markServerUnreachable();
+                    }
                     // 写操作失败时，如果有离线处理能力则走离线流程
                     if (typeof Offline !== 'undefined') {
                         return this._handleOfflineWrite(path, method, options);
