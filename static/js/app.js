@@ -259,6 +259,8 @@ const App = {
             Offline.init();
             // 启动时快速检测服务器可达性，避免首次API调用长时间等待
             API._checkServerReachability();
+            // Android 热更新检查（fire-and-forget）
+            this._checkHotUpdate();
         } catch (e) {
             console.warn('离线缓存初始化失败:', e);
         }
@@ -411,7 +413,119 @@ const App = {
             }
         }
     },
+
+    /** 检查前端静态文件热更新（仅 Android） */
+    async _checkHotUpdate() {
+        if (!window.CodeReaderAndroid) return;
+
+        const serverUrl = window.CodeReaderAndroid.getServerUrl();
+        if (!serverUrl) return;
+        const serverBase = serverUrl.replace(/\/+$/, '');
+
+        try {
+            // 获取服务器版本
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const resp = await fetch(serverBase + '/api/v1/static-version/', {
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!resp.ok) return;
+
+            const { version: serverVersion } = await resp.json();
+
+            // 与当前热更新版本比较
+            const hotVersion = localStorage.getItem('hot-update-version');
+            if (hotVersion === serverVersion) return; // 已是最新
+
+            // 与 APK 内置版本比较
+            try {
+                const localResp = await fetch('version.json');
+                if (localResp.ok) {
+                    const { version: localVersion } = await localResp.json();
+                    if (localVersion === serverVersion) {
+                        // APK 版本匹配服务器，清理热更新缓存
+                        localStorage.setItem('hot-update-version', serverVersion);
+                        await this._clearHotUpdateDb();
+                        return;
+                    }
+                }
+            } catch (_) {}
+
+            // 版本不匹配，执行热更新
+            console.info('[HotUpdate] 检测到新版本:', serverVersion);
+            await this._downloadHotUpdate(serverBase, serverVersion);
+        } catch (e) {
+            console.warn('[HotUpdate] 检查失败:', e);
+        }
+    },
+
+    /** 从服务器下载最新静态文件到 IndexedDB */
+    async _downloadHotUpdate(serverBase, serverVersion) {
+        const files = [
+            'css/main.css', 'css/code.css', 'css/graph.css',
+            'css/responsive.css', 'css/chat.css', 'css/offline.css',
+            'js/cache-db.js', 'js/api.js', 'js/offline.js',
+            'js/cache-manager.js', 'js/notes.js', 'js/ai.js',
+            'js/chat.js', 'js/browse.js', 'js/paths.js',
+            'js/graph.js', 'js/list.js', 'js/export.js', 'js/app.js',
+        ];
+
+        const db = await this._openHotUpdateDb();
+        if (!db) return;
+
+        let downloadCount = 0;
+        for (const file of files) {
+            try {
+                const resp = await fetch(serverBase + '/' + file);
+                if (resp.ok) {
+                    const content = await resp.text();
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction('files', 'readwrite');
+                        const req = tx.objectStore('files').put(content, file);
+                        req.onsuccess = () => resolve();
+                        req.onerror = () => reject(req.error);
+                    });
+                    downloadCount++;
+                }
+            } catch (e) {
+                console.warn('[HotUpdate] 下载失败:', file, e);
+            }
+        }
+
+        db.close();
+
+        if (downloadCount > 0) {
+            localStorage.setItem('hot-update-version', serverVersion);
+            console.info('[HotUpdate] 已更新', downloadCount, '个文件，重载页面');
+            location.reload();
+        }
+    },
+
+    /** 打开热更新 IndexedDB */
+    async _openHotUpdateDb() {
+        return new Promise((resolve) => {
+            try {
+                const req = indexedDB.open('codereader-hotupdate', 1);
+                req.onupgradeneeded = (e) => {
+                    e.target.result.createObjectStore('files');
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            } catch (_) { resolve(null); }
+        });
+    },
+
+    /** 清空热更新缓存 */
+    async _clearHotUpdateDb() {
+        try {
+            const db = await this._openHotUpdateDb();
+            if (!db) return;
+            const tx = db.transaction('files', 'readwrite');
+            tx.objectStore('files').clear();
+            db.close();
+        } catch (_) {}
+    },
 };
 
-// 启动应用
-document.addEventListener('DOMContentLoaded', () => App.init());
+// 启动由 index.html 动态加载器调用 App.init()

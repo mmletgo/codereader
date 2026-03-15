@@ -261,26 +261,88 @@
         <div class="spinner"></div>
     </div>
 
-    <!-- JS: 第三方库 -->
-    <script src="lib/highlight.min.js"></script>
-    <script src="lib/highlight-python.min.js"></script>
-    <script src="lib/highlight-javascript.min.js"></script>
-    <script src="lib/highlight-typescript.min.js"></script>
-    <script src="lib/d3.min.js"></script>
-    <!-- JS: 离线缓存模块（需在api.js之前加载） -->
-    <script src="js/cache-db.js"></script>
-    <!-- JS: 应用模块 -->
-    <script src="js/api.js?v=4"></script>
-    <script src="js/offline.js"></script>
-    <script src="js/cache-manager.js"></script>
-    <script src="js/notes.js"></script>
-    <script src="js/ai.js"></script>
-    <script src="js/chat.js"></script>
-    <script src="js/browse.js?v=4"></script>
-    <script src="js/paths.js?v=2"></script>
-    <script src="js/graph.js?v=2"></script>
-    <script src="js/list.js"></script>
-    <script src="js/export.js"></script>
-    <script src="js/app.js?v=5"></script>
+    <!-- JS: 动态加载器（支持 Android 热更新） -->
+    <script>
+    (async function() {
+        var _hotDb = null;
+        function openHotDb() {
+            return new Promise(function(resolve) {
+                try {
+                    var req = indexedDB.open('codereader-hotupdate', 1);
+                    req.onupgradeneeded = function(e) { e.target.result.createObjectStore('files'); };
+                    req.onsuccess = function() { resolve(req.result); };
+                    req.onerror = function() { resolve(null); };
+                } catch(e) { resolve(null); }
+            });
+        }
+        function getHotFile(path) {
+            if (!_hotDb) return Promise.resolve(null);
+            return new Promise(function(resolve) {
+                try {
+                    var tx = _hotDb.transaction('files', 'readonly');
+                    var req = tx.objectStore('files').get(path);
+                    req.onsuccess = function() { resolve(req.result || null); };
+                    req.onerror = function() { resolve(null); };
+                } catch(e) { resolve(null); }
+            });
+        }
+        function loadScriptFromSrc(src) {
+            return new Promise(function(resolve) {
+                var el = document.createElement('script');
+                el.src = src;
+                el.onload = resolve;
+                el.onerror = resolve;
+                document.head.appendChild(el);
+            });
+        }
+        function execScriptInline(content) {
+            var el = document.createElement('script');
+            el.textContent = content;
+            document.head.appendChild(el);
+        }
+        var isAndroid = !!window.CodeReaderAndroid;
+        var hasHotUpdates = false;
+        if (isAndroid) {
+            _hotDb = await openHotDb();
+            if (_hotDb) {
+                hasHotUpdates = await new Promise(function(resolve) {
+                    try {
+                        var tx = _hotDb.transaction('files', 'readonly');
+                        var req = tx.objectStore('files').count();
+                        req.onsuccess = function() { resolve(req.result > 0); };
+                        req.onerror = function() { resolve(false); };
+                    } catch(e) { resolve(false); }
+                });
+            }
+        }
+        if (hasHotUpdates) {
+            var cssFiles = ['css/main.css', 'css/code.css', 'css/graph.css', 'css/responsive.css', 'css/chat.css', 'css/offline.css'];
+            for (var i = 0; i < cssFiles.length; i++) {
+                var content = await getHotFile(cssFiles[i]);
+                if (content) {
+                    var links = document.querySelectorAll('link[rel="stylesheet"]');
+                    for (var j = 0; j < links.length; j++) {
+                        var href = links[j].getAttribute('href');
+                        if (href && href.split('?')[0] === cssFiles[i]) {
+                            var style = document.createElement('style');
+                            style.textContent = content;
+                            links[j].replaceWith(style);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        var libFiles = ['lib/highlight.min.js', 'lib/highlight-python.min.js', 'lib/highlight-javascript.min.js', 'lib/highlight-typescript.min.js', 'lib/d3.min.js'];
+        for (var i = 0; i < libFiles.length; i++) { await loadScriptFromSrc(libFiles[i]); }
+        var appFiles = ['js/cache-db.js', 'js/api.js', 'js/offline.js', 'js/cache-manager.js', 'js/notes.js', 'js/ai.js', 'js/chat.js', 'js/browse.js', 'js/paths.js', 'js/graph.js', 'js/list.js', 'js/export.js', 'js/app.js'];
+        for (var i = 0; i < appFiles.length; i++) {
+            var hotContent = hasHotUpdates ? await getHotFile(appFiles[i]) : null;
+            if (hotContent) { execScriptInline(hotContent); } else { await loadScriptFromSrc(appFiles[i]); }
+        }
+        if (_hotDb) _hotDb.close();
+        if (typeof App !== 'undefined') App.init();
+    })();
+    </script>
 </body>
 </html>

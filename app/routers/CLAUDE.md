@@ -7,6 +7,7 @@
 - `call_graph.py` — `/api/v1/call_graph/` 调用关系图数据（D3.js兼容的nodes+links格式）
 - `export.py` — `/api/v1/export/` 导出阅后记录（JSON/Markdown格式）
 - `reading_paths.py` — `/api/v1/reading-paths/` AI阅读路径（生成、列表、详情、删除、进度更新）
+- `static_version.py` — `/api/v1/static-version/` 静态文件版本哈希（用于Android热更新，启动时计算自定义JS/CSS文件SHA256）
 
 ## API设计规范
 - 所有路由使用 `APIRouter(prefix=..., tags=[...])`
