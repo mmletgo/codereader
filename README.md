@@ -203,24 +203,31 @@ python main.py
 - 本机访问：`http://localhost:8080`
 - 手机访问：`http://{局域网IP}:8080`（确保手机和电脑在同一网络）
 
-### 4. 启用 HTTPS + 添加到手机桌面（离线功能必需）
+### 4. 手机安装（二选一）
 
-PWA 离线启动需要 HTTPS（Service Worker 要求）。通过 [Tailscale](https://tailscale.com/) 提供合法 HTTPS 证书：
+#### 方式 A：Android APK（推荐）
+
+从 [Releases](https://github.com/mmletgo/codereader/releases) 下载 APK 安装到手机，首次启动输入服务器地址（如 `http://192.168.1.100:8080`）即可使用。
+
+- 静态文件打包在 APK 内，无需 HTTPS
+- 支持离线浏览已缓存的项目数据（IndexedDB）
+- 项目列表页齿轮按钮可随时修改服务器地址
+
+> 也可自行构建 APK，见 [构建 Android APK](#构建-android-apk)。
+
+#### 方式 B：PWA 安装（iOS / 浏览器）
+
+需要 HTTPS（Service Worker 要求），通过 [Tailscale](https://tailscale.com/) 提供证书：
 
 ```bash
-# 确保服务器和手机都加入了同一个 Tailscale 网络
 sudo tailscale serve --bg 8080
 ```
 
-手机通过 `https://{机器名}.{tailnet}.ts.net/` 访问（Let's Encrypt 证书，浏览器完全信任）。
-
-**添加到手机桌面：**
-- Android Chrome：菜单(⋮) → 添加到主屏幕 / 安装应用
+手机通过 `https://{机器名}.{tailnet}.ts.net/` 访问，然后：
+- Android Chrome：菜单(⋮) → 添加到主屏幕
 - iOS Safari：分享按钮(⬆) → 添加到主屏幕
 
-安装后可从桌面图标直接启动，服务器未运行时仍可浏览已缓存的项目数据。
-
-> 不需要离线功能？可以跳过此步，通过 HTTP 直接访问即可使用所有在线功能。
+> 不需要离线功能？跳过此步，通过 HTTP 直接访问即可使用所有在线功能。
 
 ### 5. 使用流程
 
@@ -270,6 +277,11 @@ codereader/
 │   ├── css/                #   样式（含响应式适配）
 │   ├── js/                 #   业务逻辑（浏览/AI/备注/导出/调用图）
 │   └── lib/                #   第三方 JS 库（highlight.js, D3.js）
+├── android/                # Android WebView 封装项目
+│   ├── app/src/main/       #   MainActivity.kt + 资源
+│   ├── sync_assets.sh      #   静态文件同步脚本
+│   └── build.gradle.kts    #   Gradle 构建配置
+├── release/                # APK 发布文件
 └── data/                   # 运行时数据（SQLite 数据库，gitignored）
 ```
 
@@ -284,6 +296,19 @@ codereader/
 | `[ai]` | `base_url` | `https://api.anthropic.com` | Claude API 地址（支持自定义代理网关） |
 | `[ai]` | `api_key` | `""` | Claude API Key |
 | `[ai]` | `model` | `claude-sonnet-4-20250514` | 模型名称 |
+
+## 构建 Android APK
+
+需要 JDK 17+ 和 Android SDK：
+
+```bash
+cd android
+bash sync_assets.sh                                              # 同步前端静态文件到 assets
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleDebug  # 构建 debug APK
+# 产物: app/build/outputs/apk/debug/app-debug.apk
+```
+
+APK 架构：前端静态文件打包在 APK 内通过 `WebViewAssetLoader` 以 HTTPS 加载，API 请求发往用户配置的远程服务器（支持 HTTP）。离线时静态文件始终可用，已下载的项目数据从 IndexedDB 读取。
 
 ## License
 

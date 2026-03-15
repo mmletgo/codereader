@@ -17,6 +17,8 @@ const App = {
         this._registerSW();
         // PWA安装引导
         this._initPWAInstall();
+        // Android WebView: 服务器设置入口
+        this._initAndroidSettings();
 
         this.route();
     },
@@ -319,6 +321,19 @@ const App = {
                 banner.style.display = 'flex';
             }
         }
+    },
+
+    /** Android WebView: 在项目列表页添加服务器设置按钮 */
+    _initAndroidSettings() {
+        if (!window.CodeReaderAndroid) return;
+        const topBar = document.querySelector('#view-projects .top-bar');
+        if (!topBar) return;
+        const btn = document.createElement('button');
+        btn.textContent = '\u2699';
+        btn.title = '修改服务器地址';
+        btn.style.cssText = 'background:none;border:none;color:var(--text-secondary);font-size:20px;padding:8px;cursor:pointer;margin-left:auto;';
+        btn.addEventListener('click', () => CodeReaderAndroid.changeServerUrl());
+        topBar.appendChild(btn);
     },
 
     /** 渲染项目卡片的缓存状态 */

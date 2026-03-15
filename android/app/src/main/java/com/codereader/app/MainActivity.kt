@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -32,7 +33,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         assetLoader = WebViewAssetLoader.Builder()
-            .addPathHandler("/static/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this))
             .build()
 
         webView = findViewById(R.id.webview)
@@ -64,6 +65,16 @@ class MainActivity : AppCompatActivity() {
             ): WebResourceResponse? {
                 return assetLoader.shouldInterceptRequest(request.url)
             }
+
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceError
+            ) {
+                if (request.isForMainFrame) {
+                    runOnUiThread { showServerUrlDialog() }
+                }
+            }
         }
 
         webView.webChromeClient = WebChromeClient()
@@ -72,7 +83,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadApp() {
-        webView.loadUrl("https://appassets.androidplatform.net/static/index.html")
+        webView.loadUrl("https://appassets.androidplatform.net/index.html")
     }
 
     private fun getServerUrlPref(): String? {

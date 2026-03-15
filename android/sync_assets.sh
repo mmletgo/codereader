@@ -4,7 +4,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ASSETS_DIR="$SCRIPT_DIR/app/src/main/assets/static"
+ASSETS_DIR="$SCRIPT_DIR/app/src/main/assets"
 
 echo "同步静态文件..."
 echo "  源: $PROJECT_ROOT/static/"
