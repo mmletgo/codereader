@@ -3,8 +3,9 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from config import HOST, PORT, STATIC_DIR
@@ -27,6 +28,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Gzip 压缩（500字节以上的响应自动压缩）
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
+
+@app.middleware("http")
+async def cache_control_middleware(request: Request, call_next) -> Response:  # type: ignore[type-arg]
+    """为静态资源添加 Cache-Control 头"""
+    response: Response = await call_next(request)
+    path = request.url.path
+    # API 和 Service Worker 不缓存
+    if path.startswith("/api/") or path == "/sw.js":
+        response.headers["Cache-Control"] = "no-cache"
+    # 带版本号的静态资源长期缓存（?v=N）
+    elif request.url.query and "v=" in request.url.query:
+        response.headers["Cache-Control"] = "public, max-age=2592000"  # 30天
+    # 其他静态资源短期缓存
+    elif not path.startswith("/api/"):
+        response.headers["Cache-Control"] = "public, max-age=86400"  # 1天
+    return response
+
 
 # API 路由
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["projects"])

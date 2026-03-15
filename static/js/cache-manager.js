@@ -89,55 +89,43 @@ const CacheManager = {
             );
             await this._runWithConcurrency(aiTasks, 5);
 
-            // 6. 下载调用关系图
-            try {
-                const graphData = await API.getCallGraph(projectId);
-                await CacheDB.put('callGraphs', { ...graphData, projectId });
-            } catch (_) {
-                // 忽略失败
-            }
+            // 6-9. 并行下载调用关系图、阅读路径、阅读进度、AI对话记录
+            await Promise.all([
+                // 6. 调用关系图
+                API.getCallGraph(projectId).then(async (graphData) => {
+                    await CacheDB.put('callGraphs', { ...graphData, projectId });
+                }).catch(() => {}),
 
-            // 7. 下载阅读路径列表及详情
-            try {
-                const pathList = await API.getReadingPaths(projectId);
-                const pathDetails = [];
-                for (const p of pathList) {
-                    try {
-                        const detail = await API.getReadingPathDetail(p.id);
-                        detail.projectId = projectId;
-                        pathDetails.push(detail);
-                    } catch (_) {
-                        // 忽略单条失败
-                    }
-                }
-                if (pathDetails.length > 0) {
-                    await CacheDB.putMany('readingPaths', pathDetails);
-                }
-            } catch (_) {
-                // 忽略失败
-            }
+                // 7. 阅读路径列表及详情（详情并发下载）
+                API.getReadingPaths(projectId).then(async (pathList) => {
+                    const pathDetailTasks = pathList.map(p => () =>
+                        API.getReadingPathDetail(p.id).then(async (detail) => {
+                            detail.projectId = projectId;
+                            await CacheDB.put('readingPaths', detail);
+                        }).catch(() => {})
+                    );
+                    await this._runWithConcurrency(pathDetailTasks, 5);
+                }).catch(() => {}),
 
-            // 8. 下载阅读进度
-            try {
-                const progressData = await API.getProgress(projectId);
-                await CacheDB.put('progress', { ...progressData, projectId });
-            } catch (_) {
-                // 忽略失败
-            }
+                // 8. 阅读进度
+                API.getProgress(projectId).then(async (progressData) => {
+                    await CacheDB.put('progress', { ...progressData, projectId });
+                }).catch(() => {}),
 
-            // 9. 下载AI对话记录：遍历所有函数，逐个获取对话历史，忽略失败
-            const chatTasks = funcs.map(f => () =>
-                API.getChatHistory(f.id).then(async (history) => {
-                    await CacheDB.put('chatHistories', {
-                        functionId: f.id,
-                        projectId,
-                        messages: history,
-                    });
-                }).catch(() => {
-                    // 忽略失败
-                })
-            );
-            await this._runWithConcurrency(chatTasks, 5);
+                // 9. AI对话记录（并发控制=5）
+                (async () => {
+                    const chatTasks = funcs.map(f => () =>
+                        API.getChatHistory(f.id).then(async (history) => {
+                            await CacheDB.put('chatHistories', {
+                                functionId: f.id,
+                                projectId,
+                                messages: history,
+                            });
+                        }).catch(() => {})
+                    );
+                    await this._runWithConcurrency(chatTasks, 5);
+                })(),
+            ]);
 
             // 10. 更新 cacheMeta：完成状态
             await CacheDB.setCacheMeta(projectId, {
@@ -214,22 +202,59 @@ const CacheManager = {
     },
 
     /**
-     * 通用并发控制器
-     * @param {Array<function(): Promise>} tasks - 任务数组，每个元素是 () => Promise
-     * @param {number} concurrency - 最大并发数
+     * 等待页面变为可见状态（移动端切回前台）
+     * 页面已可见时立即返回
      * @returns {Promise<void>}
      */
-    async _runWithConcurrency(tasks, concurrency) {
+    _waitForVisible() {
+        if (!document.hidden) return Promise.resolve();
+        return new Promise(resolve => {
+            const handler = () => {
+                if (!document.hidden) {
+                    document.removeEventListener('visibilitychange', handler);
+                    resolve();
+                }
+            };
+            document.addEventListener('visibilitychange', handler);
+        });
+    },
+
+    /**
+     * 通用并发控制器（带重试和可见性感知）
+     * @param {Array<function(): Promise>} tasks - 任务数组，每个元素是 () => Promise
+     * @param {number} concurrency - 最大并发数
+     * @param {number} [retries=2] - 每个任务最大重试次数
+     * @returns {Promise<void>}
+     */
+    async _runWithConcurrency(tasks, concurrency, retries = 2) {
         let index = 0;
         const total = tasks.length;
         if (total === 0) return;
 
-        const results = [];
+        const self = this;
 
         async function runNext() {
             while (index < total) {
+                // 页面不可见时暂停发起新任务
+                await self._waitForVisible();
+
                 const currentIndex = index++;
-                await tasks[currentIndex]();
+                let lastErr;
+                for (let attempt = 0; attempt <= retries; attempt++) {
+                    try {
+                        await tasks[currentIndex]();
+                        lastErr = null;
+                        break;
+                    } catch (err) {
+                        lastErr = err;
+                        if (attempt < retries) {
+                            // 等待后重试，同时等页面回到前台
+                            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                            await self._waitForVisible();
+                        }
+                    }
+                }
+                if (lastErr) throw lastErr;
             }
         }
 

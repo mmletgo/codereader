@@ -11,12 +11,13 @@
 - 第三方JS库: 本地存储在 static/lib/
 
 ## 目录结构
-- `main.py` — 应用入口，FastAPI实例创建，路由注册，静态文件挂载
+- `main.py` — 应用入口，FastAPI实例创建，路由注册，静态文件挂载，GZip压缩中间件，Cache-Control静态资源缓存头，CORS中间件（Android WebView跨域）
 - `config.py` — 配置加载（从config.toml读取，缺省用默认值）
 - `config.example.toml` — 配置模板（复制为config.toml使用，config.toml被git忽略）
 - `app/` — FastAPI应用（路由、服务、数据库、模型）
 - `analyzer/` — Python代码分析引擎（AST解析、调用关系解析）
 - `static/` — 前端静态文件（HTML/CSS/JS）
+- `android/` — Android WebView封装项目（Kotlin + Gradle）
 - `data/` — 运行时数据（SQLite数据库文件）
 - `tests/` — 测试代码
 - `docs/` — 项目文档
@@ -47,6 +48,30 @@ python main.py
 - 本机访问: http://localhost:8080
 - 局域网手机访问: http://{本机IP}:8080
 
+### HTTPS（PWA离线必需）
+PWA离线启动需要HTTPS（Service Worker要求）。通过 Tailscale 提供合法HTTPS：
+```bash
+sudo tailscale serve --bg 8080    # 自动签发Let's Encrypt证书
+```
+手机通过 `https://{机器名}.{tailnet}.ts.net/` 访问，浏览器完全信任。
+
+### Android APK（推荐）
+原生WebView封装，静态文件打包在APK内，API请求发往用户配置的远程服务器：
+```bash
+cd android
+bash sync_assets.sh                           # 同步前端静态文件
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleDebug  # 构建APK
+# 产物: app/build/outputs/apk/debug/app-debug.apk
+```
+首次启动弹出服务器地址输入框（如 `http://192.168.1.100:8080`），之后自动连接。
+离线体验：静态文件从APK加载（永远可用）+ IndexedDB缓存数据 = 无需网络即可浏览已缓存项目。
+
+### 添加到手机桌面（PWA方式，备用）
+通过Tailscale HTTPS访问后，手机浏览器会显示PWA安装引导：
+- Android Chrome: 菜单(⋮) → 添加到主屏幕 / 安装应用
+- iOS Safari: 分享按钮(⬆) → 添加到主屏幕
+安装后可从桌面图标直接启动，服务器未运行时仍可浏览已缓存的项目数据。
+
 ## 重要设计决策
 - 分析引擎(engine.py)支持 `existing_project_id` 参数用于重新扫描，避免UNIQUE约束冲突
 - 重新扫描时通过qualified_name保留并重新绑定用户备注
@@ -55,3 +80,4 @@ python main.py
 - AI解读缓存：按函数体SHA256哈希判断失效，函数未变则复用缓存，变了则重新生成
 - AI配置：config.toml的[ai]段配置base_url/api_key/model，支持自定义代理网关
 - 配置管理：config.toml（实际配置，gitignored）+ config.example.toml（模板，git跟踪）
+- Android封装：前端静态文件打包进APK通过WebViewAssetLoader以HTTPS加载，API通过JS Bridge获取用户配置的服务器地址，CORS中间件允许`appassets.androidplatform.net`跨域，WebView中跳过SW/PWA注册

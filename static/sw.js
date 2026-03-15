@@ -1,43 +1,7 @@
-const CACHE_NAME = 'codereader-static-v1';
+const CACHE_NAME = 'codereader-static-v3';
 
-const PRECACHE_URLS = [
-  '/',
-  '/css/main.css',
-  '/css/code.css',
-  '/css/graph.css',
-  '/css/responsive.css',
-  '/css/chat.css',
-  '/css/offline.css',
-  '/js/api.js',
-  '/js/app.js',
-  '/js/browse.js',
-  '/js/notes.js',
-  '/js/ai.js',
-  '/js/chat.js',
-  '/js/paths.js',
-  '/js/graph.js',
-  '/js/list.js',
-  '/js/export.js',
-  '/js/cache-db.js',
-  '/js/offline.js',
-  '/js/cache-manager.js',
-  '/lib/highlight.min.js',
-  '/lib/highlight-python.min.js',
-  '/lib/d3.min.js',
-  '/lib/atom-one-dark.min.css',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png'
-];
-
-// Install: pre-cache all critical static resources
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
-  );
-});
+// Install: 立即激活，不预缓存（避免安装卡住）
+self.addEventListener('install', () => self.skipWaiting());
 
 // Activate: clean up old version caches
 self.addEventListener('activate', (event) => {
@@ -64,20 +28,23 @@ self.addEventListener('fetch', (event) => {
   // Navigation requests: try network first, fallback to cached SPA entry
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .catch(() => caches.match('/'))
+      fetch(event.request).then((response) => {
+        // 缓存首页用于离线回退
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
+        return response;
+      }).catch(() => caches.match('/'))
     );
     return;
   }
 
-  // Static resources: cache-first strategy
+  // Static resources: cache-first, miss then fetch and cache
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) {
         return cached;
       }
       return fetch(event.request).then((response) => {
-        // Only cache successful same-origin responses
         if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;
         }
