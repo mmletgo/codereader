@@ -160,14 +160,13 @@ const CacheManager = {
             );
             await this._runWithConcurrency(genTasks, 3);
 
-            // 6-9. 并行下载调用关系图、阅读路径、阅读进度、AI对话记录
+            // 6-8. 并行下载调用关系图、阅读路径、阅读进度
+            progress(0, 1, 'extras');
             await Promise.all([
-                // 6. 调用关系图
                 API.getCallGraph(projectId).then(async (graphData) => {
                     await CacheDB.put('callGraphs', { ...graphData, projectId });
                 }).catch(() => {}),
 
-                // 7. 阅读路径列表及详情（详情并发下载）
                 API.getReadingPaths(projectId).then(async (pathList) => {
                     const pathDetailTasks = pathList.map(p => () =>
                         API.getReadingPathDetail(p.id).then(async (detail) => {
@@ -178,25 +177,29 @@ const CacheManager = {
                     await this._runWithConcurrency(pathDetailTasks, 5);
                 }).catch(() => {}),
 
-                // 8. 阅读进度
                 API.getProgress(projectId).then(async (progressData) => {
                     await CacheDB.put('progress', { ...progressData, projectId });
                 }).catch(() => {}),
-
-                // 9. AI对话记录（并发控制=5）
-                (async () => {
-                    const chatTasks = funcs.map(f => () =>
-                        API.getChatHistory(f.id).then(async (history) => {
-                            await CacheDB.put('chatHistories', {
-                                functionId: f.id,
-                                projectId,
-                                messages: history,
-                            });
-                        }).catch(() => {})
-                    );
-                    await this._runWithConcurrency(chatTasks, 5);
-                })(),
             ]);
+            progress(1, 1, 'extras');
+
+            // 9. AI对话记录（并发控制=5）
+            let chatDone = 0;
+            const chatTotal = funcs.length;
+            progress(0, chatTotal, 'chat');
+            const chatTasks = funcs.map(f => () =>
+                API.getChatHistory(f.id).then(async (history) => {
+                    await CacheDB.put('chatHistories', {
+                        functionId: f.id,
+                        projectId,
+                        messages: history,
+                    });
+                }).catch(() => {}).finally(() => {
+                    chatDone++;
+                    progress(chatDone, chatTotal, 'chat');
+                })
+            );
+            await this._runWithConcurrency(chatTasks, 5);
 
             // 10. 更新 cacheMeta：完成状态
             await CacheDB.setCacheMeta(projectId, {

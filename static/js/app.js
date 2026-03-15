@@ -397,7 +397,7 @@ const App = {
         statusEl.innerHTML = '<div class="cache-progress"><div class="cache-progress-bar" style="width:0%"></div></div><span class="cache-progress-text">准备下载...</span>';
 
         try {
-            const phaseLabels = { functions: '函数列表', details: '函数详情', 'ai-fetch': '下载AI解读', 'ai-generate': '生成AI解读' };
+            const phaseLabels = { functions: '函数列表', details: '函数详情', 'ai-fetch': '下载AI解读', 'ai-generate': '生成AI解读', extras: '附加数据', chat: '对话记录' };
             await CacheManager.downloadProject(projectId, (current, total, phase) => {
                 const pct = total > 0 ? Math.round(current / total * 100) : 0;
                 const bar = statusEl.querySelector('.cache-progress-bar');
