@@ -4,8 +4,17 @@
  * DOM 依赖: #offline-indicator
  */
 const Offline = {
-    /** @type {boolean} 当前网络状态 */
+    /** @type {boolean} 当前设备网络状态 */
     isOnline: navigator.onLine,
+
+    /**
+     * 检查服务器是否实际可用（设备在线 + 服务器可达）
+     * 其他模块应使用此方法替代直接检查 isOnline
+     * @returns {boolean}
+     */
+    get isServerAvailable() {
+        return this.isOnline && (typeof API === 'undefined' || API._serverReachable);
+    },
 
     /** @type {boolean} 是否正在同步 */
     _syncing: false,
@@ -38,7 +47,10 @@ const Offline = {
     /** 网络恢复处理 */
     _handleOnline() {
         this.isOnline = true;
-        this.updateIndicator('hidden');
+        // 网络恢复时重新检测服务器可达性
+        if (typeof API !== 'undefined') {
+            API._checkServerReachability();
+        }
         this.sync();
     },
 

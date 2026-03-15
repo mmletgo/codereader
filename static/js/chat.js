@@ -105,7 +105,7 @@ const Chat = {
 
     /** 发送消息 */
     async send() {
-        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+        if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
             return; // 离线时不发送
         }
         const textarea = document.getElementById('chat-input');
@@ -157,7 +157,7 @@ const Chat = {
     _updateSendState() {
         const sendBtn = document.getElementById('chat-send-btn');
         const textarea = document.getElementById('chat-input');
-        const isOffline = typeof Offline !== 'undefined' && !Offline.isOnline;
+        const isOffline = typeof Offline !== 'undefined' && !Offline.isServerAvailable;
 
         if (isOffline) {
             sendBtn.disabled = true;
@@ -172,7 +172,7 @@ const Chat = {
 
     /** 重置对话 */
     async reset() {
-        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+        if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
             alert('离线模式不支持重置对话');
             return;
         }

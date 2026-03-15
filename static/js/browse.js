@@ -580,7 +580,7 @@ const Browse = {
         // 重置已读状态
         document.getElementById('btn-reset-read').addEventListener('click', async () => {
             document.getElementById('browse-menu').style.display = 'none';
-            if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+            if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
                 alert('离线模式不支持重置已读状态');
                 return;
             }
@@ -741,7 +741,7 @@ const Browse = {
 
     /** 重新扫描项目代码 */
     async _rescan() {
-        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+        if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
             alert('离线模式不支持重新扫描');
             return;
         }

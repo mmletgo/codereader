@@ -31,7 +31,8 @@
 - 6个视图section通过display:flex/none切换，App.route()根据location.hash分发
 - 全局对象：API、Browse、Notes、AI、Graph、List、Export、Paths、App、CacheDB、Offline、CacheManager
 - 模块间通信：Notes直接访问Browse.currentDetail和Browse.cache更新备注数据
-- 离线架构：CacheDB(IndexedDB封装) → API(离线感知读写) → Offline(队列+同步) → CacheManager(批量下载)，Service Worker独立处理静态资源缓存
+- 离线架构：CacheDB(IndexedDB封装) → API(离线感知读写+服务器可达性检测) → Offline(队列+同步+isServerAvailable综合判断) → CacheManager(批量下载)，Service Worker独立处理静态资源缓存
+- 服务器可达性：API模块维护_serverReachable状态，区分"设备离线"和"设备在线但服务器不可达"两种场景。首次请求失败后标记服务器不可达，后续请求直接读缓存（30秒重试间隔）。启动时3秒超时快速探测。其他模块通过Offline.isServerAvailable统一判断
 
 ## 6个视图路由
 - `#/` — 项目列表页（view-projects），卡片式布局，新建/删除项目

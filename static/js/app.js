@@ -157,8 +157,8 @@ const App = {
         listEl.querySelectorAll('.project-card-delete').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                if (typeof Offline !== 'undefined' && !Offline.isOnline) {
-                    alert('离线模式不支持删除项目');
+                if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
+                    alert('服务器不可达，不支持删除项目');
                     return;
                 }
                 const id = parseInt(btn.dataset.projectId);
@@ -187,8 +187,8 @@ const App = {
         const errorMsg = document.getElementById('project-create-error');
 
         btnNew.addEventListener('click', () => {
-            if (typeof Offline !== 'undefined' && !Offline.isOnline) {
-                alert('离线模式不支持创建项目');
+            if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
+                alert('服务器不可达，不支持创建项目');
                 return;
             }
             inputPath.value = '';
@@ -257,6 +257,8 @@ const App = {
         try {
             await CacheDB.open();
             Offline.init();
+            // 启动时快速检测服务器可达性，避免首次API调用长时间等待
+            API._checkServerReachability();
         } catch (e) {
             console.warn('离线缓存初始化失败:', e);
         }

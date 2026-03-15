@@ -97,7 +97,7 @@ const Paths = {
 
     /** 创建阅读路径 */
     async _createPath() {
-        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+        if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
             const errorEl = document.getElementById('path-create-error');
             errorEl.textContent = '离线模式不支持AI生成阅读路径';
             errorEl.style.display = 'block';
@@ -191,7 +191,7 @@ const Paths = {
      * @param {number} pathId
      */
     async _deletePath(pathId) {
-        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
+        if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
             alert('离线模式不支持删除路径');
             return;
         }

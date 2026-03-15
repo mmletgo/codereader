@@ -6,38 +6,120 @@
 const API = {
     BASE: '/api/v1',
 
+    /** @type {boolean} 服务器是否可达（区别于设备网络连接状态） */
+    _serverReachable: true,
+    /** @type {number} 上次检测到服务器不可达的时间戳 */
+    _lastServerFailTime: 0,
+    /** @type {number} 服务器不可达时的重试间隔（毫秒） */
+    _SERVER_RETRY_INTERVAL: 30000,
+    /** @type {number} 网络请求超时时间（毫秒） */
+    _FETCH_TIMEOUT: 8000,
+
     // ========== 核心请求方法 ==========
 
     /**
-     * 纯网络请求（不做离线处理）
+     * 判断是否应该尝试访问服务器
+     * 设备在线 + (服务器可达 或 距上次失败已超过重试间隔)
+     * @returns {boolean}
+     */
+    _shouldTryServer() {
+        const online = typeof Offline === 'undefined' || Offline.isOnline;
+        if (!online) return false;
+        if (this._serverReachable) return true;
+        return Date.now() - this._lastServerFailTime > this._SERVER_RETRY_INTERVAL;
+    },
+
+    /**
+     * 标记服务器不可达
+     */
+    _markServerUnreachable() {
+        if (this._serverReachable) {
+            this._serverReachable = false;
+            console.warn('[API] 服务器不可达，后续请求将优先使用缓存');
+            if (typeof Offline !== 'undefined') {
+                Offline.updateIndicator('offline');
+            }
+        }
+        this._lastServerFailTime = Date.now();
+    },
+
+    /**
+     * 标记服务器恢复可达
+     */
+    _markServerReachable() {
+        if (!this._serverReachable) {
+            this._serverReachable = true;
+            console.info('[API] 服务器已恢复连接');
+            if (typeof Offline !== 'undefined') {
+                Offline.updateIndicator('hidden');
+            }
+        }
+    },
+
+    /**
+     * 纯网络请求（不做离线处理），带超时控制
      * @param {string} path - API路径（不含BASE前缀）
      * @param {object} options - fetch选项
      * @returns {Promise<any>}
      */
     async _fetch(path, options = {}) {
         const url = this.BASE + path;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this._FETCH_TIMEOUT);
         const config = {
             headers: { 'Content-Type': 'application/json' },
             ...options,
+            signal: controller.signal,
         };
-        const resp = await fetch(url, config);
-        if (!resp.ok) {
-            let detail = '';
-            try {
-                const err = await resp.json();
-                detail = err.detail || JSON.stringify(err);
-            } catch (_) {
-                detail = resp.statusText;
+        try {
+            const resp = await fetch(url, config);
+            clearTimeout(timeoutId);
+            if (!resp.ok) {
+                let detail = '';
+                try {
+                    const err = await resp.json();
+                    detail = err.detail || JSON.stringify(err);
+                } catch (_) {
+                    detail = resp.statusText;
+                }
+                throw new Error(detail || `HTTP ${resp.status}`);
             }
-            throw new Error(detail || `HTTP ${resp.status}`);
+            if (resp.status === 204) return null;
+            const text = await resp.text();
+            return text ? JSON.parse(text) : null;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            if (e.name === 'AbortError') {
+                throw new Error('请求超时');
+            }
+            throw e;
         }
-        if (resp.status === 204) return null;
-        const text = await resp.text();
-        return text ? JSON.parse(text) : null;
     },
 
     /**
-     * 通用请求方法（带离线感知）
+     * 快速检测服务器可达性（启动时调用，fire-and-forget）
+     * 使用短超时，不阻塞应用启动
+     */
+    async _checkServerReachability() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            const resp = await fetch(this.BASE + '/projects/', {
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (resp.ok) {
+                this._markServerReachable();
+            } else {
+                this._markServerUnreachable();
+            }
+        } catch (_) {
+            this._markServerUnreachable();
+        }
+    },
+
+    /**
+     * 通用请求方法（带离线感知 + 服务器可达性检测）
      * @param {string} path - API路径（不含BASE前缀）
      * @param {object} options - fetch选项
      * @returns {Promise<any>}
@@ -47,14 +129,16 @@ const API = {
         const online = typeof Offline === 'undefined' || Offline.isOnline;
 
         if (method === 'GET') {
-            if (online) {
-                // 在线：尝试网络请求
+            if (this._shouldTryServer()) {
+                // 尝试网络请求
                 try {
                     const data = await this._fetch(path, options);
+                    this._markServerReachable();
                     // 异步更新缓存（fire-and-forget）
                     this._updateCache(path, data);
                     return data;
                 } catch (e) {
+                    this._markServerUnreachable();
                     // 网络错误时尝试从缓存读取
                     const cached = await this._readCache(path);
                     if (cached !== null && cached !== undefined) {
@@ -63,20 +147,30 @@ const API = {
                     throw e;
                 }
             } else {
-                // 离线：从缓存读取
+                // 离线或服务器不可达：从缓存读取
                 const cached = await this._readCache(path);
                 if (cached !== null && cached !== undefined) {
                     return cached;
                 }
-                throw new Error('离线模式，无缓存数据');
+                throw new Error(online ? '服务器不可达，无缓存数据' : '离线模式，无缓存数据');
             }
         } else {
             // 写操作 (POST/PUT/DELETE)
-            if (online) {
-                const data = await this._fetch(path, options);
-                // 异步更新缓存（fire-and-forget）
-                this._updateCacheAfterWrite(path, method, options.body, data);
-                return data;
+            if (this._shouldTryServer()) {
+                try {
+                    const data = await this._fetch(path, options);
+                    this._markServerReachable();
+                    // 异步更新缓存（fire-and-forget）
+                    this._updateCacheAfterWrite(path, method, options.body, data);
+                    return data;
+                } catch (e) {
+                    this._markServerUnreachable();
+                    // 写操作失败时，如果有离线处理能力则走离线流程
+                    if (typeof Offline !== 'undefined') {
+                        return this._handleOfflineWrite(path, method, options);
+                    }
+                    throw e;
+                }
             } else {
                 return this._handleOfflineWrite(path, method, options);
             }
@@ -429,12 +523,12 @@ const API = {
      * @returns {Promise<Array>} 所有函数的基本信息列表
      */
     async getAllFunctions(projectId) {
-        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
-            // 离线：直接从 IndexedDB 查全部
+        if (!this._shouldTryServer()) {
+            // 离线或服务器不可达：直接从 IndexedDB 查全部
             const items = await CacheDB.getAllByIndex('functions', 'projectId', projectId);
             return items || [];
         }
-        // 在线：原逻辑（分页加载）
+        // 在线且服务器可达：原逻辑（分页加载）
         const allItems = [];
         let page = 1;
         const perPage = 200;
@@ -526,8 +620,8 @@ const API = {
 
     /** 获取导出文本（Markdown格式，不做JSON解析） */
     async getExportText(projectId) {
-        if (typeof Offline !== 'undefined' && !Offline.isOnline) {
-            throw new Error('离线模式不支持导出功能');
+        if (!this._shouldTryServer()) {
+            throw new Error('服务器不可达，不支持导出功能');
         }
         const url = `${this.BASE}/export/?project_id=${projectId}&format=markdown`;
         const resp = await fetch(url);
