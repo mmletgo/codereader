@@ -227,6 +227,7 @@ sudo tailscale up
 从 [Releases](https://github.com/mmletgo/codereader/releases) 下载 APK 安装到手机，首次启动输入服务器地址即可使用。
 
 - 静态文件打包在 APK 内，启动即用
+- **前端热更新** — 服务器端代码更新后，APP 连接时自动检测版本差异，下载最新 JS/CSS 文件缓存到本地，无需重新安装 APK
 - 支持离线浏览已缓存的项目数据（IndexedDB）
 - 项目列表页齿轮按钮可随时修改服务器地址
 
@@ -324,6 +325,8 @@ JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleDebug  # 构建 d
 ```
 
 APK 架构：前端静态文件打包在 APK 内通过 `WebViewAssetLoader` 以 HTTPS 加载，API 请求发往用户配置的远程服务器（支持 HTTP）。离线时静态文件始终可用，已下载的项目数据从 IndexedDB 读取。
+
+**热更新机制**：`sync_assets.sh` 打包时会计算所有自定义 JS/CSS 文件的哈希写入 `version.json`。APP 启动后连接服务器时，对比服务器的 `/api/v1/static-version/` 返回的哈希值。版本不一致时自动从服务器下载最新的 JS/CSS 文件到 IndexedDB，页面刷新后即生效。因此日常更新前端代码只需重启服务器，APP 端自动获取最新版本，无需重新构建和安装 APK。
 
 ## License
 
