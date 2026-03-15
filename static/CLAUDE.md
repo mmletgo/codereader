@@ -9,7 +9,7 @@
 - `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar、阅读路径页双面板并排布局；≥1440px断点：更宽侧边栏、更大字体）
 - `js/app.js` — 应用入口，hash路由管理（6条路由规则），项目列表页渲染和创建/删除逻辑，离线缓存系统初始化（CacheDB/Offline/SW），PWA安装引导，项目卡片缓存状态渲染与下载/删除操作
 - `js/api.js` — API请求封装（统一fetch wrapper带离线感知：GET请求在线缓存+离线回退IndexedDB，写操作离线入队列+本地更新+模拟响应，_pathToStore路径到IndexedDB store映射）
-- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、代码高亮渲染、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载、PC端侧边栏函数列表渲染与搜索、阅读路径模式激活/退出/进度跟踪，init()支持pathId参数通过URL传递路径状态）
+- `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、多语言代码高亮渲染（Python/JS/TS动态切换）、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载、PC端侧边栏函数列表渲染与搜索、阅读路径模式激活/退出/进度跟踪，init()支持pathId参数通过URL传递路径状态）
 - `js/paths.js` — AI阅读路径管理页（路径列表/详情双面板切换、创建路径、查看详情、激活跳转浏览器、删除路径、PC端双面板并排布局感知）
 - `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
 - `js/ai.js` — AI辅助分析模块（函数解读面板展开/折叠、行级代码解释、AI自动备注生成、简单Markdown渲染、前端缓存+防重复请求）
@@ -24,7 +24,7 @@
 - `sw.js` — Service Worker（静态资源预缓存、Cache-First策略、API请求放行、离线导航回退SPA入口）
 - `manifest.json` — PWA清单（应用名CodeReader、standalone显示模式、主题色、图标配置）
 - `icons/` — PWA图标（icon-192.png、icon-512.png）
-- `lib/` — 第三方库本地文件（highlight.min.js, highlight-python.min.js, d3.min.js, github-dark.min.css）
+- `lib/` — 第三方库本地文件（highlight.min.js, highlight-python.min.js, highlight-javascript.min.js, highlight-typescript.min.js, d3.min.js, github-dark.min.css）
 
 ## 前端架构
 纯HTML/CSS/JS单页应用，hash路由，无构建步骤。

@@ -1,13 +1,13 @@
 # CodeReader - 移动端代码阅读器
 
 ## 项目概述
-移动端Web应用，分析Python代码库的函数调用关系，提供左右切换函数浏览、阅后备注、一键导出等功能。
+移动端Web应用，分析代码库的函数调用关系，提供左右切换函数浏览、阅后备注、一键导出等功能。支持 Python、JavaScript、TypeScript 代码分析。
 
 ## 技术栈
 - 后端: FastAPI + uvicorn + SQLite (标准库sqlite3)
-- 代码分析: Python ast 模块
+- 代码分析: Python ast 模块 + tree-sitter (JS/TS)
 - AI: Anthropic Claude API (anthropic SDK)
-- 前端: 纯HTML/CSS/JS + highlight.js(代码高亮) + D3.js(调用关系图)
+- 前端: 纯HTML/CSS/JS + highlight.js(代码高亮，支持Python/JS/TS) + D3.js(调用关系图)
 - 第三方JS库: 本地存储在 static/lib/
 
 ## 目录结构
@@ -15,7 +15,7 @@
 - `config.py` — 配置加载（从config.toml读取，缺省用默认值）
 - `config.example.toml` — 配置模板（复制为config.toml使用，config.toml被git忽略）
 - `app/` — FastAPI应用（路由、服务、数据库、模型）
-- `analyzer/` — Python代码分析引擎（AST解析、调用关系解析）
+- `analyzer/` — 代码分析引擎（Python AST + JS/TS tree-sitter解析、调用关系解析）
 - `static/` — 前端静态文件（HTML/CSS/JS）
 - `android/` — Android WebView封装项目（Kotlin + Gradle）
 - `data/` — 运行时数据（SQLite数据库文件）
@@ -23,7 +23,7 @@
 - `docs/` — 项目文档
 
 ## 核心功能
-1. **项目扫描**: 指定目录路径，递归扫描Python文件，提取所有函数定义和调用关系
+1. **项目扫描**: 指定目录路径，递归扫描源文件（Python/JS/TS），提取所有函数定义和调用关系
 2. **函数浏览**: 按调用关系排序，左右切换函数，上下滚动查看代码（语法高亮），自动标记已读，支持筛选未读函数，行级显示调用的项目内函数（f(N)按钮展开查看函数名+docstring，可点击跳转）
 3. **调用关系图**: D3.js横向树状图，展示函数调用关系，节点可点击跳转
 4. **阅后备注**: 为每个函数添加备注（类型：general/bug/todo/refactor/question），持久化存储
@@ -34,7 +34,7 @@
 9. **离线缓存(PWA)**: 项目数据手动下载到IndexedDB供离线浏览，Service Worker缓存静态资源支持PWA离线启动，离线写操作（标记已读/备注/进度）入队列在网络恢复后自动同步，AI功能离线时自动禁用
 
 ## 数据流
-用户指定目录 → scanner扫描文件 → python_analyzer提取函数+调用 → call_resolver解析调用关系 → engine存入SQLite → API提供数据 → 前端渲染
+用户指定目录 → scanner扫描文件 → 按扩展名分派分析器(PythonAnalyzer/JsAnalyzer)提取函数+调用 → call_resolver解析调用关系 → engine存入SQLite → API提供数据 → 前端渲染（动态选择语言高亮）
 
 ## 函数浏览排序逻辑
 默认按调用关系排序：找到入口函数（无调用者），DFS遍历调用链，赋予sort_order值。未被调用链覆盖的函数按文件路径+行号追加。
