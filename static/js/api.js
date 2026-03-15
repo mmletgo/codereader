@@ -65,10 +65,12 @@ const API = {
     async _fetch(path, options = {}) {
         const url = this.BASE + path;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this._FETCH_TIMEOUT);
+        const timeout = options._timeout || this._FETCH_TIMEOUT;
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const { _timeout, ...fetchOptions } = options;
         const config = {
             headers: { 'Content-Type': 'application/json' },
-            ...options,
+            ...fetchOptions,
             signal: controller.signal,
         };
         try {
@@ -164,6 +166,10 @@ const API = {
                     this._updateCacheAfterWrite(path, method, options.body, data);
                     return data;
                 } catch (e) {
+                    if (e.message === '请求超时') {
+                        // 超时不代表服务器不可达（如AI操作耗时较长），直接抛出
+                        throw e;
+                    }
                     this._markServerUnreachable();
                     // 写操作失败时，如果有离线处理能力则走离线流程
                     if (typeof Offline !== 'undefined') {
@@ -659,7 +665,7 @@ const API = {
 
     /** 获取函数AI解读 */
     async getAIExplanation(functionId) {
-        return this.request(`/ai/explanation?function_id=${functionId}`);
+        return this.request(`/ai/explanation?function_id=${functionId}`, { _timeout: 120000 });
     },
 
     /** 查询项目中已有AI解读缓存的函数ID列表 */
@@ -676,6 +682,7 @@ const API = {
                 line_number: lineNumber,
                 line_content: lineContent,
             }),
+            _timeout: 120000,
         });
     },
 
@@ -687,6 +694,7 @@ const API = {
                 function_id: functionId,
                 project_id: projectId,
             }),
+            _timeout: 120000,
         });
     },
 
@@ -702,6 +710,7 @@ const API = {
         return this.request('/ai/chat', {
             method: 'POST',
             body: JSON.stringify({ function_id: functionId, message }),
+            _timeout: 120000,
         });
     },
 
@@ -717,6 +726,7 @@ const API = {
         return this.request('/reading-paths/', {
             method: 'POST',
             body: JSON.stringify({ project_id: projectId, query }),
+            _timeout: 120000,
         });
     },
 
