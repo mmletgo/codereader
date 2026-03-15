@@ -28,10 +28,7 @@ def _compute_static_hash() -> str:
     return hasher.hexdigest()[:16]
 
 
-STATIC_VERSION: str = _compute_static_hash()
-
-
 @router.get("/")
 async def get_static_version() -> dict[str, str]:
-    """返回当前静态文件版本哈希"""
-    return {"version": STATIC_VERSION}
+    """返回当前静态文件版本哈希（每次请求动态计算，确保文件变更后无需重启）"""
+    return {"version": _compute_static_hash()}

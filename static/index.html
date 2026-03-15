@@ -33,11 +33,7 @@
         </header>
         <div class="view-body">
             <div id="projects-list" class="projects-list"></div>
-            <div id="projects-empty" class="empty-state" style="display:none;">
-                <div class="empty-icon">📂</div>
-                <p>还没有项目</p>
-                <p class="text-secondary">点击下方按钮添加一个Python项目目录</p>
-            </div>
+            <div id="projects-empty" class="empty-state" style="display:none;"></div>
             <button id="btn-new-project" class="fab" title="新建项目">+</button>
         </div>
         <!-- 新建项目对话框 -->
@@ -45,7 +41,7 @@
             <div class="dialog">
                 <h3>新建项目</h3>
                 <label class="input-label">目录路径</label>
-                <input type="text" id="input-project-path" class="input" placeholder="/path/to/python/project">
+                <input type="text" id="input-project-path" class="input" placeholder="/path/to/your/project">
                 <label class="input-label">项目名称（可选）</label>
                 <input type="text" id="input-project-name" class="input" placeholder="留空则自动使用目录名">
                 <div class="dialog-actions">
@@ -95,7 +91,7 @@
                     </div>
                 </div>
                 <div class="browse-code" id="browse-code">
-                    <pre><code id="code-block" class="language-python"></code></pre>
+                    <pre><code id="code-block"></code></pre>
                 </div>
                 <div class="ai-panel" id="ai-panel">
                     <div class="ai-toggle" id="ai-toggle">

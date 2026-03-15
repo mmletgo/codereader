@@ -103,6 +103,7 @@ const App = {
             const projects = await API.getProjects();
             if (!projects || projects.length === 0) {
                 listEl.innerHTML = '';
+                emptyEl.innerHTML = '<div class="empty-icon">\u{1F4C2}</div><p>还没有项目</p><p class="text-secondary">点击下方按钮添加一个项目目录（支持 Python/JS/TS）</p>';
                 emptyEl.style.display = 'flex';
                 return;
             }
@@ -185,6 +186,9 @@ const App = {
         const inputPath = document.getElementById('input-project-path');
         const inputName = document.getElementById('input-project-name');
         const errorMsg = document.getElementById('project-create-error');
+
+        // 动态设置 placeholder（热更新覆盖 HTML 硬编码值）
+        inputPath.placeholder = '/path/to/your/project';
 
         btnNew.addEventListener('click', () => {
             if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) {
@@ -477,7 +481,7 @@ const App = {
         let downloadCount = 0;
         for (const file of files) {
             try {
-                const resp = await fetch(serverBase + '/' + file);
+                const resp = await fetch(serverBase + '/' + file, { cache: 'no-store' });
                 if (resp.ok) {
                     const content = await resp.text();
                     await new Promise((resolve, reject) => {

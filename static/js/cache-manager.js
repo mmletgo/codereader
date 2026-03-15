@@ -21,6 +21,9 @@ const CacheManager = {
      * @returns {Promise<void>}
      */
     async downloadProject(projectId, onProgress) {
+        // 停止浏览页后台预加载，避免冲突
+        this.stopBrowsePrefetch();
+
         // 可重入：如果已经在下载中，返回已有的 Promise
         if (this._downloadingMap.has(projectId)) {
             return this._downloadingMap.get(projectId);
@@ -316,16 +319,12 @@ const CacheManager = {
         }
 
         // 未缓存：启动全量下载+生成
+        // 注意：不放入 _downloadingMap，避免阻塞 downloadProject 的 onProgress 回调
         this._showBrowseProgress();
         this._updateBrowseProgress();
 
-        const promise = this._doBrowsePrefetch(projectId, functions).finally(() => {
-            this._downloadingMap.delete(projectId);
-        });
-        this._downloadingMap.set(projectId, promise);
-
         try {
-            await promise;
+            await this._doBrowsePrefetch(projectId, functions);
         } catch (e) {
             console.warn('[CacheManager] 后台预加载出错:', e);
         }

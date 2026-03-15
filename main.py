@@ -44,9 +44,12 @@ async def cache_control_middleware(request: Request, call_next) -> Response:  # 
     # 带版本号的静态资源长期缓存（?v=N）
     elif request.url.query and "v=" in request.url.query:
         response.headers["Cache-Control"] = "public, max-age=2592000"  # 30天
-    # 其他静态资源短期缓存
+    # 第三方库长期缓存（不会变动）
+    elif "/lib/" in path:
+        response.headers["Cache-Control"] = "public, max-age=2592000"  # 30天
+    # 自定义静态文件始终验证（ETag保证性能，热更新不会读到旧缓存）
     elif not path.startswith("/api/"):
-        response.headers["Cache-Control"] = "public, max-age=86400"  # 1天
+        response.headers["Cache-Control"] = "no-cache"
     return response
 
 
