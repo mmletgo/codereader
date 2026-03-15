@@ -2,10 +2,17 @@
  * 函数浏览器模块
  * 核心页面：左右切换函数、代码高亮、行号显示
  */
-const _PY_KEYWORDS = new Set(['if','else','elif','for','while','with','as','try','except',
-    'finally','raise','return','yield','import','from','class','def','and','or',
-    'not','in','is','lambda','pass','break','continue','del','assert','global',
-    'nonlocal','async','await','print']);
+const _LANG_KEYWORDS = {
+    python: new Set(['if','else','elif','for','while','with','as','try','except',
+        'finally','raise','return','yield','import','from','class','def','and','or',
+        'not','in','is','lambda','pass','break','continue','del','assert','global',
+        'nonlocal','async','await','print']),
+    javascript: new Set(['if','else','for','while','do','switch','case','default',
+        'break','continue','return','throw','try','catch','finally','function',
+        'class','const','let','var','new','delete','typeof','instanceof','in','of',
+        'void','this','super','import','export','from','as','async','await',
+        'yield','debugger','with','null','undefined','true','false']),
+};
 
 const Browse = {
     projectId: null,
@@ -187,7 +194,7 @@ const Browse = {
         if (cachedHtml) {
             const codeEl = document.getElementById('code-block');
             codeEl.innerHTML = cachedHtml;
-            codeEl.className = 'language-python hljs';
+            codeEl.className = `language-${this._getHljsLang(detail)} hljs`;
             document.getElementById('browse-code').scrollTop = 0;
         } else {
             this.renderCode(detail);
@@ -255,11 +262,20 @@ const Browse = {
         }
     },
 
+    /** 根据 detail.language 获取 hljs 语言标识 */
+    _getHljsLang(detail) {
+        const lang = detail.language || 'python';
+        // hljs typescript 模块同时覆盖 JS 和 TS 语法高亮
+        return (lang === 'javascript' || lang === 'typescript') ? 'typescript' : 'python';
+    },
+
     /** 构建代码HTML（高亮+行号+调用按钮+AI按钮） */
     _buildCodeHtml(detail) {
         const startLine = detail.start_line;
-        let highlighted = hljs.highlight(detail.body, { language: 'python' }).value;
-        highlighted = this._enhanceHighlight(highlighted);
+        const hljsLang = this._getHljsLang(detail);
+        const lang = detail.language || 'python';
+        let highlighted = hljs.highlight(detail.body, { language: hljsLang }).value;
+        highlighted = this._enhanceHighlight(highlighted, lang);
 
         const rawLines = highlighted.split('\n');
         let openTags = [];
@@ -289,16 +305,21 @@ const Browse = {
         const html = this._buildCodeHtml(detail);
         const codeEl = document.getElementById('code-block');
         codeEl.innerHTML = html;
-        codeEl.className = 'language-python hljs';
+        codeEl.className = `language-${this._getHljsLang(detail)} hljs`;
         this.htmlCache.set(detail.id, html);
         document.getElementById('browse-code').scrollTop = 0;
     },
 
     /**
-     * 增强高亮：在 hljs 输出基础上补充函数调用、类名、self/cls、类型注解等
+     * 增强高亮：在 hljs 输出基础上补充函数调用、类名、self/cls/this、类型注解等
      * 模拟 VSCode One Dark Pro 的语义高亮效果
+     * @param {string} html - hljs 输出的 HTML
+     * @param {string} lang - 语言标识 (python/javascript/typescript)
      */
-    _enhanceHighlight(html) {
+    _enhanceHighlight(html, lang) {
+        const kwLang = (lang === 'typescript') ? 'javascript' : lang;
+        const keywords = _LANG_KEYWORDS[kwLang] || _LANG_KEYWORDS.python;
+        const isJs = (lang === 'javascript' || lang === 'typescript');
         const parts = html.split(/(<[^>]*>)/);
         let inSpan = 0;
         for (let i = 0; i < parts.length; i++) {
@@ -311,8 +332,8 @@ const Browse = {
             if (inSpan > 0) continue;
             let t = part;
             // 1. 函数/方法调用: word( → 高亮为函数色
-            t = t.replace(/\b([a-zA-Z_]\w*)\s*(?=\()/g, (m, name) => {
-                if (_PY_KEYWORDS.has(name)) return m;
+            t = t.replace(/\b([a-zA-Z_$]\w*)\s*(?=\()/g, (m, name) => {
+                if (keywords.has(name)) return m;
                 return `<span class="syn-func-call">${name}</span>`;
             });
             // 2. 大写开头标识符 → 类名（PascalCase）
@@ -320,12 +341,16 @@ const Browse = {
                 if (name === name.toUpperCase() && name.length > 1) return m;
                 return `<span class="syn-class-name">${name}</span>`;
             });
-            // 3. self / cls
-            t = t.replace(/\b(self|cls)\b/g, '<span class="syn-self">$1</span>');
-            // 4. 装饰器
+            // 3. self/cls (Python) 或 this (JS/TS)
+            if (isJs) {
+                t = t.replace(/\b(this)\b/g, '<span class="syn-self">$1</span>');
+            } else {
+                t = t.replace(/\b(self|cls)\b/g, '<span class="syn-self">$1</span>');
+            }
+            // 4. 装饰器（Python 和 TS 都支持）
             t = t.replace(/(@)([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)/g, '<span class="syn-decorator">$1$2</span>');
             // 5. 点号后方法调用
-            t = t.replace(/\.([a-zA-Z_]\w*)\s*(?=\()/g, '.<span class="syn-method-call">$1</span>');
+            t = t.replace(/\.([a-zA-Z_$]\w*)\s*(?=\()/g, '.<span class="syn-method-call">$1</span>');
             parts[i] = t;
         }
         return parts.join('');
@@ -414,7 +439,7 @@ const Browse = {
             return `<span class="skeleton-line" style="width:${w}%"></span>`;
         });
         codeEl.innerHTML = lines.join('\n');
-        codeEl.className = 'language-python';
+        codeEl.className = '';
     },
 
     /** 渲染空状态 */

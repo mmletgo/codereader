@@ -4,12 +4,20 @@ import os
 import sqlite3
 from collections import defaultdict
 
-from analyzer.base import CallInfo, FileAnalysisResult, FunctionInfo, ImportInfo
+from analyzer.base import BaseAnalyzer, CallInfo, FileAnalysisResult, FunctionInfo, ImportInfo
 from analyzer.call_resolver import CallResolver
+from analyzer.js_analyzer import JsAnalyzer
 from analyzer.python_analyzer import PythonAnalyzer
 from analyzer.scanner import scan_directory
 from app.database import get_db, insert_row, fetch_all, execute
 from config import DEFAULT_INCLUDE, DEFAULT_EXCLUDE
+
+# 多语言分析器注册
+_analyzers: list[BaseAnalyzer] = [PythonAnalyzer(), JsAnalyzer()]
+_ext_map: dict[str, BaseAnalyzer] = {}
+for _a in _analyzers:
+    for _ext in _a.supported_extensions():
+        _ext_map[_ext] = _a
 
 
 def analyze_project(
@@ -41,11 +49,15 @@ def analyze_project(
     # 1. 扫描文件
     files: list[tuple[str, str]] = scan_directory(root_path, include, exclude)
 
-    # 2. 逐文件分析
-    analyzer: PythonAnalyzer = PythonAnalyzer()
+    # 2. 逐文件分析（按扩展名分派到对应分析器）
     analysis_results: list[FileAnalysisResult] = []
 
     for abs_path, rel_path in files:
+        ext: str = os.path.splitext(rel_path)[1].lower()
+        analyzer: BaseAnalyzer | None = _ext_map.get(ext)
+        if analyzer is None:
+            continue  # 不支持的文件类型跳过
+
         try:
             with open(abs_path, "r", encoding="utf-8") as f:
                 content: str = f.read()
@@ -87,7 +99,7 @@ def analyze_project(
             project_id: int = insert_row(conn, "projects", {
                 "name": project_name,
                 "root_path": root_path,
-                "language": "python",
+                "language": _detect_language(analysis_results),
             })
 
         # 5. 写入 files 和 functions
@@ -167,6 +179,18 @@ def analyze_project(
         )
 
     return project_id
+
+
+def _detect_language(results: list[FileAnalysisResult]) -> str:
+    """根据实际分析结果中的语言统计，推断项目主要语言。"""
+    languages: set[str] = {r.language for r in results}
+    if not languages:
+        return "python"
+    if languages == {"python"}:
+        return "python"
+    if languages <= {"javascript", "typescript"}:
+        return "javascript"
+    return "mixed"
 
 
 def _find_func_id(

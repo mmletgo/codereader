@@ -7,7 +7,7 @@ from pydantic import BaseModel
 class ProjectCreate(BaseModel):
     root_path: str
     name: str | None = None
-    include_patterns: list[str] = ["*.py"]
+    include_patterns: list[str] = ["*.py", "*.js", "*.jsx", "*.mjs", "*.ts", "*.tsx"]
     exclude_patterns: list[str] = []
 
 
@@ -39,6 +39,7 @@ class FunctionListItem(BaseModel):
     caller_count: int = 0
     callee_count: int = 0
     is_read: bool = False
+    language: str = "python"
 
 
 class FunctionBrief(BaseModel):
@@ -83,6 +84,7 @@ class FunctionDetail(BaseModel):
     decorators: list[str]
     docstring: str | None = None
     is_read: bool = False
+    language: str = "python"
     callers: list[FunctionBrief]
     callees: list[FunctionBrief]
     notes: list[NoteInFunction]

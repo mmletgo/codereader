@@ -36,7 +36,7 @@ def get_function_list(
         SELECT
             f.id, f.name, f.qualified_name, f.signature,
             fi.rel_path AS file_path,
-            f.start_line, f.end_line, f.is_async, f.is_method, f.class_name, f.is_read,
+            f.start_line, f.end_line, f.is_async, f.is_method, f.class_name, f.is_read, fi.language,
             COALESCE(nc.note_count, 0) AS note_count,
             COALESCE(cr_in.caller_count, 0) AS caller_count,
             COALESCE(cr_out.callee_count, 0) AS callee_count
@@ -82,6 +82,7 @@ def get_function_list(
             caller_count=row["caller_count"],
             callee_count=row["callee_count"],
             is_read=bool(row["is_read"]),
+            language=row["language"],
         ))
 
     return FunctionListResponse(
@@ -97,7 +98,7 @@ def get_function_detail(conn: sqlite3.Connection, function_id: int) -> FunctionD
     row = fetch_one(
         conn,
         """
-        SELECT f.*, fi.rel_path AS file_path
+        SELECT f.*, fi.rel_path AS file_path, fi.language
         FROM functions f
         JOIN files fi ON f.file_id = fi.id
         WHERE f.id = ?
@@ -138,6 +139,7 @@ def get_function_detail(conn: sqlite3.Connection, function_id: int) -> FunctionD
         decorators=decorators,
         docstring=row["docstring"],
         is_read=bool(row["is_read"]),
+        language=row.get("language", "python"),
         callers=callers,
         callees=callees,
         notes=notes,

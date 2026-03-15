@@ -32,7 +32,7 @@ EXPORT_DIR: Path = DATA_DIR / "exports"
 STATIC_DIR: Path = _PROJECT_ROOT / "static"
 
 # 代码分析默认配置
-DEFAULT_INCLUDE: list[str] = _analysis.get("include", ["*.py"])
+DEFAULT_INCLUDE: list[str] = _analysis.get("include", ["*.py", "*.js", "*.jsx", "*.mjs", "*.ts", "*.tsx"])
 DEFAULT_EXCLUDE: list[str] = _analysis.get("exclude", [
     "__pycache__", ".git", ".venv", "venv", "env",
     "node_modules", ".tox", ".mypy_cache", ".pytest_cache",

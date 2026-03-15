@@ -1,4 +1,5 @@
 """调用关系跨文件解析器 - 将调用名称匹配到具体函数定义"""
+import os
 from collections import defaultdict
 
 from analyzer.base import CallInfo, FunctionInfo, ImportInfo
@@ -75,8 +76,8 @@ class CallResolver:
             caller_qname, caller_file_map
         )
 
-        # 1. self.method / cls.method → 从 caller 的 class 中查找同类方法
-        if callee_name.startswith("self.") or callee_name.startswith("cls."):
+        # 1. self.method / cls.method / this.method → 从 caller 的 class 中查找同类方法
+        if callee_name.startswith(("self.", "cls.", "this.")):
             method_name: str = callee_name.split(".", 1)[1]
             # 跳过多级属性访问（如 self.logger.warning）
             if "." in method_name:
@@ -145,7 +146,7 @@ class CallResolver:
                 if imp.alias == obj_name:
                     # import module; module.func() -> 在 module 对应文件中查找 func
                     resolved_func: str | None = self._find_func_in_module(
-                        imp.module, imp.name, attr_name
+                        imp.module, imp.name, attr_name, caller_file
                     )
                     if resolved_func is not None:
                         return resolved_func
@@ -177,7 +178,7 @@ class CallResolver:
                 target_name: str = imp.name
                 module_path: str = imp.module
                 resolved: str | None = self._find_func_in_module(
-                    module_path, target_name, target_name
+                    module_path, target_name, target_name, caller_file
                 )
                 if resolved is not None:
                     return resolved
@@ -188,16 +189,23 @@ class CallResolver:
         module_path: str,
         imported_name: str,
         func_name: str,
+        caller_file: str | None = None,
     ) -> str | None:
         """在模块对应的文件中查找函数。
 
         将模块路径转为文件相对路径，然后在 file_func_map 中查找。
+        对 JS/TS 相对路径，基于 caller_file 的目录进行解析。
         """
-        # 将模块路径转为可能的文件路径
-        # 例如: analyzer.base -> analyzer/base.py
         possible_paths: list[str] = _module_to_file_paths(module_path)
 
         for path in possible_paths:
+            # JS/TS 相对路径需要基于 caller_file 解析
+            if path.startswith("./") or path.startswith("../"):
+                if caller_file is not None:
+                    caller_dir: str = os.path.dirname(caller_file)
+                    path = os.path.normpath(os.path.join(caller_dir, path))
+                else:
+                    continue
             funcs: list[FunctionInfo] = self.file_func_map.get(path, [])
             for func in funcs:
                 if func.name == func_name or func.qualified_name == func_name:
@@ -206,14 +214,23 @@ class CallResolver:
 
 
 def _module_to_file_paths(module_path: str) -> list[str]:
-    """将 Python 模块路径转为可能的文件相对路径列表。
+    """将模块路径转为可能的文件相对路径列表。
 
+    支持 Python 点分路径和 JS/TS 相对路径。
     例如:
-        "analyzer.base" -> ["analyzer/base.py"]
-        "analyzer" -> ["analyzer/__init__.py", "analyzer.py"]
+        "analyzer.base" -> ["analyzer/base.py", "analyzer/base/__init__.py"]
+        "./utils" -> ["./utils.js", "./utils.jsx", ..., "./utils/index.js", ...]
     """
     if not module_path:
         return []
+    # JS/TS 相对路径（以 ./ 或 ../ 开头）
+    if module_path.startswith("./") or module_path.startswith("../"):
+        js_exts: list[str] = [".js", ".jsx", ".mjs", ".ts", ".tsx"]
+        paths: list[str] = [f"{module_path}{ext}" for ext in js_exts]
+        for ext in [".js", ".ts", ".jsx", ".tsx"]:
+            paths.append(f"{module_path}/index{ext}")
+        return paths
+    # Python 点分路径
     parts: list[str] = module_path.replace(".", "/").split("/")
     base: str = "/".join(parts)
     return [

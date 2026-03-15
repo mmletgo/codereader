@@ -6,7 +6,7 @@ host = "0.0.0.0"
 port = 8080
 
 [analysis]
-include = ["*.py"]
+include = ["*.py", "*.js", "*.jsx", "*.mjs", "*.ts", "*.tsx"]
 exclude = [
     "__pycache__", ".git", ".venv", "venv", "env",
     "node_modules", ".tox", ".mypy_cache", ".pytest_cache",
