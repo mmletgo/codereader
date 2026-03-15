@@ -13,13 +13,12 @@
 - `js/paths.js` — AI阅读路径管理页（路径列表/详情双面板切换、创建路径、查看详情、激活跳转浏览器、删除路径、PC端双面板并排布局感知）
 - `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
 - `js/ai.js` — AI辅助分析模块（函数解读面板展开/折叠、行级代码解释、AI自动备注生成、简单Markdown渲染、前端缓存+防重复请求）
-- `js/prefetch.js` — 后台预加载模块（进入浏览页后自动在后台缓存所有函数详情和AI解读，Phase1并发3加载函数详情+预渲染HTML，Phase2并发1加载AI解读，带进度条UI、页面不可见时暂停、并发控制器）
 - `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存、AI备注显示AI标识）
 - `js/list.js` — 函数列表页（按文件分组、搜索debounce 300ms、点击跳转浏览器）
 - `js/chat.js` — AI对话模块（对话界面打开/关闭、消息渲染、发送/重置、打字指示器、预设问题、自动滚动、visualViewport虚拟键盘适配、离线时禁用发送）
 - `js/cache-db.js` — IndexedDB封装层（数据库codereader-cache，10个对象存储，通用CRUD、offlineOps队列、cacheMeta管理、按projectId索引批量删除）
 - `js/offline.js` — 离线管理模块（网络状态监听online/offline事件、离线操作队列入队、操作合并去重、同步引擎回放pending操作、同步结果Toast提示、离线状态指示器UI）
-- `js/cache-manager.js` — 缓存下载管理器（downloadProject并发下载项目全部数据到IndexedDB、deleteProjectCache清理、getCacheStatus/getCacheInfo状态查询、_runWithConcurrency并发控制器）
+- `js/cache-manager.js` — 缓存下载管理器+后台预加载（downloadProject并发下载项目全部数据到IndexedDB、deleteProjectCache清理、getCacheStatus/getCacheInfo状态查询、_runWithConcurrency并发控制器、startBrowsePrefetch/stopBrowsePrefetch浏览页后台预加载：已缓存项目从IndexedDB加载到内存+检查缺少的AI解读、未缓存项目全量下载函数详情+AI解读+附加数据到IndexedDB并同时填充内存缓存Browse.cache/htmlCache和AI.explanationCache、进度条UI）
 - `js/export.js` — 导出页面（JSON/Markdown格式切换、预览缓存、Blob下载）
 - `css/offline.css` — 离线/PWA样式（PWA安装引导条、离线状态指示器、缓存进度条、缓存操作按钮、备注未同步标识、离线禁用态、同步Toast动画）
 - `sw.js` — Service Worker（静态资源预缓存、Cache-First策略、API请求放行、离线导航回退SPA入口）
@@ -30,7 +29,7 @@
 ## 前端架构
 纯HTML/CSS/JS单页应用，hash路由，无构建步骤。
 - 6个视图section通过display:flex/none切换，App.route()根据location.hash分发
-- 全局对象：API、Browse、Notes、AI、Prefetch、Graph、List、Export、Paths、App、CacheDB、Offline、CacheManager
+- 全局对象：API、Browse、Notes、AI、Graph、List、Export、Paths、App、CacheDB、Offline、CacheManager
 - 模块间通信：Notes直接访问Browse.currentDetail和Browse.cache更新备注数据
 - 离线架构：CacheDB(IndexedDB封装) → API(离线感知读写+服务器可达性检测) → Offline(队列+同步+isServerAvailable综合判断) → CacheManager(批量下载)，Service Worker独立处理静态资源缓存
 - 服务器可达性：API模块维护_serverReachable状态，区分"设备离线"和"设备在线但服务器不可达"两种场景。首次请求失败后标记服务器不可达，后续请求直接读缓存（30秒重试间隔）。启动时3秒超时快速探测。其他模块通过Offline.isServerAvailable统一判断
@@ -57,7 +56,7 @@
 ## 移动端交互设计
 - 函数浏览：底部导航栏左右箭头按钮切换函数，上下滚动查看代码
 - 函数默认按调用关系排序（后端sort_order字段），进入时一次性加载全部函数基本信息
-- 性能优化：init()三个API并行加载、_enhanceHighlight单次遍历HTML、骨架屏占位、requestIdleCallback调度预加载、_buildCodeHtml去重复用、Prefetch后台全量预加载（函数详情+AI解读）
+- 性能优化：init()三个API并行加载、_enhanceHighlight单次遍历HTML、骨架屏占位、requestIdleCallback调度预加载、_buildCodeHtml去重复用、CacheManager后台全量预加载（函数详情+AI解读，IndexedDB持久化+内存缓存双写）
 - 代码区域：highlight.js语法高亮，每行用`<span class="line" data-line="N">`包裹实现行号
 - 备注面板：页面底部，点击"备注(N)"切换展开/折叠，展开时代码区自动缩小
 - 调用关系图：D3.js横向树（左到右），支持双指缩放和拖拽，节点颜色区分状态（当前函数蓝色高亮、已读绿色、未读灰色、有备注红色边框），节点可点击跳转

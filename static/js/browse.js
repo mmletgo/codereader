@@ -37,7 +37,7 @@ const Browse = {
      */
     async init(projectId, funcId, pathId) {
         // 停止之前的预加载
-        if (typeof Prefetch !== 'undefined') Prefetch.stop();
+        CacheManager.stopBrowsePrefetch();
 
         this.projectId = projectId;
         this.cache.clear();
@@ -71,9 +71,7 @@ const Browse = {
                 if (idx >= 0) await this.showFunction(idx);
             }
             // 启动后台预加载
-            if (typeof Prefetch !== 'undefined') {
-                setTimeout(() => Prefetch.start(this.projectId, this.functions), 500);
-            }
+            setTimeout(() => CacheManager.startBrowsePrefetch(this.projectId, this.functions), 500);
             return;
         }
 
@@ -104,9 +102,7 @@ const Browse = {
         }
 
         // 启动后台预加载所有函数
-        if (typeof Prefetch !== 'undefined') {
-            setTimeout(() => Prefetch.start(this.projectId, this.functions), 500);
-        }
+        setTimeout(() => CacheManager.startBrowsePrefetch(this.projectId, this.functions), 500);
     },
 
     /** 加载项目信息 */

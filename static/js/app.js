@@ -467,7 +467,7 @@ const App = {
             'css/responsive.css', 'css/chat.css', 'css/offline.css',
             'js/cache-db.js', 'js/api.js', 'js/offline.js',
             'js/cache-manager.js', 'js/notes.js', 'js/ai.js',
-            'js/prefetch.js', 'js/chat.js', 'js/browse.js', 'js/paths.js',
+            'js/chat.js', 'js/browse.js', 'js/paths.js',
             'js/graph.js', 'js/list.js', 'js/export.js', 'js/app.js',
         ];
 

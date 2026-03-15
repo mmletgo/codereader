@@ -1,11 +1,17 @@
 /**
- * 缓存下载管理器
- * 负责将项目数据从服务端下载到 IndexedDB 缓存
- * 依赖: CacheDB, API
+ * 缓存下载管理器 + 后台预加载
+ * 负责将项目数据从服务端下载到 IndexedDB 缓存，
+ * 以及进入浏览页后自动在后台缓存所有函数详情和AI解读。
+ * 依赖: CacheDB, API, Browse, AI
  */
 const CacheManager = {
     /** @type {Map<number, Promise<void>>} 正在下载中的项目 Promise */
     _downloadingMap: new Map(),
+
+    /** @type {boolean} 后台预加载中止标记 */
+    _bgAbort: false,
+    /** @type {{detailsDone: number, detailsTotal: number, aiDone: number, aiTotal: number, phase: string}|null} */
+    _bgProgress: null,
 
     /**
      * 下载某个项目的全部数据到 IndexedDB 缓存
@@ -263,5 +269,419 @@ const CacheManager = {
             workers.push(runNext());
         }
         await Promise.all(workers);
+    },
+
+    // ========== 后台预加载（浏览页自动触发） ==========
+
+    /**
+     * 启动浏览页后台预加载
+     * @param {number} projectId
+     * @param {Array<{id: number}>} functions - 函数列表
+     */
+    async startBrowsePrefetch(projectId, functions) {
+        this.stopBrowsePrefetch();
+        if (!functions || functions.length === 0) return;
+        if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) return;
+
+        this._bgAbort = false;
+        this._bgProgress = {
+            detailsDone: 0,
+            detailsTotal: functions.length,
+            aiDone: 0,
+            aiTotal: functions.length,
+            phase: 'details',
+        };
+
+        // 检查 IndexedDB cacheMeta
+        const meta = await CacheDB.getCacheMeta(projectId);
+
+        if (meta && meta.status === 'complete') {
+            // 已缓存：从 IndexedDB 加载到内存，然后检查缺少的AI解读
+            this._showBrowseProgress();
+            this._updateBrowseProgress();
+            await this._loadMemoryFromDB(projectId, functions);
+            if (!this._bgAbort) {
+                await this._generateMissingAI(projectId, functions);
+            }
+            if (!this._bgAbort) {
+                this._updateBrowseProgress();
+                setTimeout(() => this._hideBrowseProgress(), 3000);
+            }
+            return;
+        }
+
+        if (this._downloadingMap.has(projectId)) {
+            // 正在下载中，不干扰
+            return;
+        }
+
+        // 未缓存：启动全量下载+生成
+        this._showBrowseProgress();
+        this._updateBrowseProgress();
+
+        const promise = this._doBrowsePrefetch(projectId, functions).finally(() => {
+            this._downloadingMap.delete(projectId);
+        });
+        this._downloadingMap.set(projectId, promise);
+
+        try {
+            await promise;
+        } catch (e) {
+            console.warn('[CacheManager] 后台预加载出错:', e);
+        }
+    },
+
+    /**
+     * 停止浏览页后台预加载
+     */
+    stopBrowsePrefetch() {
+        this._bgAbort = true;
+        this._hideBrowseProgress();
+    },
+
+    /**
+     * 全量后台预加载（函数详情 + AI解读 + 附加数据）
+     * @param {number} projectId
+     * @param {Array<{id: number}>} functions
+     * @returns {Promise<void>}
+     */
+    async _doBrowsePrefetch(projectId, functions) {
+        // 设置 cacheMeta = downloading
+        await CacheDB.setCacheMeta(projectId, {
+            status: 'downloading',
+            downloadedAt: null,
+            serverScanTime: null,
+            funcCount: 0,
+        });
+
+        try {
+            // 获取项目信息并存入 IndexedDB
+            const projects = await API.getProjects();
+            const project = projects.find(p => p.id === projectId);
+            if (project) {
+                await CacheDB.put('projects', project);
+            }
+
+            // 函数列表存入 IndexedDB
+            const funcsWithProject = functions.map(f => ({ ...f, projectId }));
+            await CacheDB.putMany('functions', funcsWithProject);
+
+            // Phase 1: 函数详情（并发=3）
+            this._bgProgress.phase = 'details';
+            const uncachedDetails = functions.filter(f => !Browse.cache.has(f.id));
+            this._bgProgress.detailsDone = functions.length - uncachedDetails.length;
+            this._updateBrowseProgress();
+
+            const detailTasks = uncachedDetails.map(f => async () => {
+                if (this._bgAbort) return;
+                await this._waitForVisible();
+                try {
+                    let detail = Browse.cache.get(f.id);
+                    if (!detail) {
+                        detail = await API.getFunctionDetail(f.id);
+                        Browse.cache.set(f.id, detail);
+                    }
+                    // 预渲染HTML
+                    if (!Browse.htmlCache.has(f.id)) {
+                        Browse.htmlCache.set(f.id, Browse._buildCodeHtml(detail));
+                    }
+                    // 写入 IndexedDB
+                    detail.projectId = projectId;
+                    await CacheDB.put('functionDetails', detail);
+                } catch (e) {
+                    // 忽略单个失败
+                }
+                this._bgProgress.detailsDone++;
+                this._updateBrowseProgress();
+            });
+
+            await this._runWithConcurrency(detailTasks, 3, 1);
+            if (this._bgAbort) return;
+
+            // Phase 2: AI解读
+            this._bgProgress.phase = 'ai';
+
+            // 查询后端已缓存的AI解读
+            /** @type {Set<number>} */
+            let cachedSet = new Set();
+            try {
+                const status = await API.getAIExplanationStatus(projectId);
+                cachedSet = new Set(status.cached_function_ids);
+            } catch (e) {
+                // 接口不可用时跳过优化
+            }
+
+            // 分两组：后端已缓存但前端没有 / 后端未缓存
+            const needFetchFromServer = [];
+            const needGenerate = [];
+            for (const f of functions) {
+                if (AI.explanationCache.has(f.id)) {
+                    // 前端内存已有，跳过
+                    continue;
+                }
+                if (cachedSet.has(f.id)) {
+                    needFetchFromServer.push(f);
+                } else {
+                    needGenerate.push(f);
+                }
+            }
+
+            const alreadyCachedCount = functions.length - needFetchFromServer.length - needGenerate.length;
+            this._bgProgress.aiDone = alreadyCachedCount;
+            this._updateBrowseProgress();
+
+            // 2a. 后端已缓存 → 并发5快速获取
+            const fetchTasks = needFetchFromServer.map(f => async () => {
+                if (this._bgAbort) return;
+                await this._waitForVisible();
+                try {
+                    const data = await API.getAIExplanation(f.id);
+                    AI.explanationCache.set(f.id, data.explanation);
+                    data.projectId = projectId;
+                    data.functionId = f.id;
+                    await CacheDB.put('aiExplanations', data);
+                } catch (e) {
+                    // 忽略
+                }
+                this._bgProgress.aiDone++;
+                this._updateBrowseProgress();
+            });
+
+            await this._runWithConcurrency(fetchTasks, 5, 1);
+            if (this._bgAbort) return;
+
+            // 2b. 后端未缓存 → 并发1逐个生成
+            const genTasks = needGenerate.map(f => async () => {
+                if (this._bgAbort) return;
+                await this._waitForVisible();
+                try {
+                    const data = await API.getAIExplanation(f.id);
+                    AI.explanationCache.set(f.id, data.explanation);
+                    data.projectId = projectId;
+                    data.functionId = f.id;
+                    await CacheDB.put('aiExplanations', data);
+                } catch (e) {
+                    // 忽略
+                }
+                this._bgProgress.aiDone++;
+                this._updateBrowseProgress();
+            });
+
+            await this._runWithConcurrency(genTasks, 1, 1);
+            if (this._bgAbort) return;
+
+            // Phase 3: 附加数据（调用关系图、阅读路径、阅读进度、AI对话记录）
+            await Promise.all([
+                API.getCallGraph(projectId).then(async (graphData) => {
+                    await CacheDB.put('callGraphs', { ...graphData, projectId });
+                }).catch(() => {}),
+
+                API.getReadingPaths(projectId).then(async (pathList) => {
+                    const pathDetailTasks = pathList.map(p => () =>
+                        API.getReadingPathDetail(p.id).then(async (detail) => {
+                            detail.projectId = projectId;
+                            await CacheDB.put('readingPaths', detail);
+                        }).catch(() => {})
+                    );
+                    await this._runWithConcurrency(pathDetailTasks, 5);
+                }).catch(() => {}),
+
+                API.getProgress(projectId).then(async (progressData) => {
+                    await CacheDB.put('progress', { ...progressData, projectId });
+                }).catch(() => {}),
+
+                (async () => {
+                    const chatTasks = functions.map(f => () =>
+                        API.getChatHistory(f.id).then(async (history) => {
+                            await CacheDB.put('chatHistories', {
+                                functionId: f.id,
+                                projectId,
+                                messages: history,
+                            });
+                        }).catch(() => {})
+                    );
+                    await this._runWithConcurrency(chatTasks, 5);
+                })(),
+            ]);
+
+            // 设置 cacheMeta = complete
+            await CacheDB.setCacheMeta(projectId, {
+                status: 'complete',
+                downloadedAt: new Date().toISOString(),
+                serverScanTime: (project && project.scan_time) || null,
+                funcCount: functions.length,
+            });
+        } catch (err) {
+            await CacheDB.setCacheMeta(projectId, {
+                status: 'error',
+                downloadedAt: null,
+                serverScanTime: null,
+                funcCount: 0,
+                error: err.message,
+            });
+            throw err;
+        } finally {
+            if (!this._bgAbort) {
+                this._updateBrowseProgress();
+                setTimeout(() => this._hideBrowseProgress(), 3000);
+            }
+        }
+    },
+
+    /**
+     * 从 IndexedDB 加载函数详情和AI解读到内存缓存
+     * @param {number} projectId
+     * @param {Array<{id: number}>} functions
+     * @returns {Promise<void>}
+     */
+    async _loadMemoryFromDB(projectId, functions) {
+        this._bgProgress.phase = 'loading';
+        this._bgProgress.detailsDone = 0;
+        this._bgProgress.detailsTotal = functions.length;
+        this._bgProgress.aiDone = 0;
+        this._bgProgress.aiTotal = functions.length;
+        this._updateBrowseProgress();
+
+        // 加载函数详情到 Browse.cache + Browse.htmlCache
+        let detailCount = 0;
+        for (const f of functions) {
+            if (this._bgAbort) return;
+            if (!Browse.cache.has(f.id)) {
+                try {
+                    const detail = await CacheDB.get('functionDetails', f.id);
+                    if (detail) {
+                        Browse.cache.set(f.id, detail);
+                        if (!Browse.htmlCache.has(f.id)) {
+                            Browse.htmlCache.set(f.id, Browse._buildCodeHtml(detail));
+                        }
+                    }
+                } catch (e) {
+                    // 忽略单个失败
+                }
+            }
+            detailCount++;
+            if (detailCount % 10 === 0) {
+                this._bgProgress.detailsDone = detailCount;
+                this._updateBrowseProgress();
+            }
+        }
+        this._bgProgress.detailsDone = functions.length;
+        this._updateBrowseProgress();
+
+        // 加载AI解读到 AI.explanationCache
+        let aiCount = 0;
+        for (const f of functions) {
+            if (this._bgAbort) return;
+            if (!AI.explanationCache.has(f.id)) {
+                try {
+                    const data = await CacheDB.get('aiExplanations', f.id);
+                    if (data && data.explanation) {
+                        AI.explanationCache.set(f.id, data.explanation);
+                    }
+                } catch (e) {
+                    // 忽略
+                }
+            }
+            aiCount++;
+            if (aiCount % 10 === 0) {
+                this._bgProgress.aiDone = aiCount;
+                this._updateBrowseProgress();
+            }
+        }
+        this._bgProgress.aiDone = functions.length;
+        this._updateBrowseProgress();
+    },
+
+    /**
+     * 检查并生成缺少的AI解读
+     * @param {number} projectId
+     * @param {Array<{id: number}>} functions
+     * @returns {Promise<void>}
+     */
+    async _generateMissingAI(projectId, functions) {
+        if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) return;
+
+        /** @type {Set<number>} */
+        let cachedSet = new Set();
+        try {
+            const status = await API.getAIExplanationStatus(projectId);
+            cachedSet = new Set(status.cached_function_ids);
+        } catch (e) {
+            return; // 接口不可用则跳过
+        }
+
+        // 找出缺少AI解读的函数（前端内存没有，后端也没有）
+        const missing = functions.filter(f =>
+            !AI.explanationCache.has(f.id) && !cachedSet.has(f.id)
+        );
+        if (missing.length === 0) return;
+
+        this._bgProgress.phase = 'ai';
+        this._bgProgress.aiDone = functions.length - missing.length;
+        this._bgProgress.aiTotal = functions.length;
+        this._showBrowseProgress();
+        this._updateBrowseProgress();
+
+        const tasks = missing.map(f => async () => {
+            if (this._bgAbort) return;
+            await this._waitForVisible();
+            try {
+                const data = await API.getAIExplanation(f.id);
+                AI.explanationCache.set(f.id, data.explanation);
+                data.projectId = projectId;
+                data.functionId = f.id;
+                await CacheDB.put('aiExplanations', data);
+            } catch (e) {
+                // 忽略
+            }
+            this._bgProgress.aiDone++;
+            this._updateBrowseProgress();
+        });
+
+        await this._runWithConcurrency(tasks, 1, 1);
+    },
+
+    // ========== 进度条UI ==========
+
+    /** 显示浏览页预加载进度条 */
+    _showBrowseProgress() {
+        const el = document.getElementById('prefetch-progress');
+        if (el) el.style.display = '';
+    },
+
+    /** 隐藏浏览页预加载进度条 */
+    _hideBrowseProgress() {
+        const el = document.getElementById('prefetch-progress');
+        if (el) el.style.display = 'none';
+    },
+
+    /** 更新浏览页预加载进度条 */
+    _updateBrowseProgress() {
+        const p = this._bgProgress;
+        if (!p) return;
+        const textEl = document.getElementById('prefetch-text');
+        if (!textEl) return;
+
+        const allDetailsDone = p.detailsDone >= p.detailsTotal;
+        const allAiDone = p.aiDone >= p.aiTotal;
+
+        if (allDetailsDone && allAiDone) {
+            textEl.textContent = '预加载完成';
+            const barEl = document.getElementById('prefetch-bar');
+            if (barEl) barEl.style.width = '100%';
+            return;
+        }
+
+        const parts = [];
+        if (!allDetailsDone) parts.push(`缓存 ${p.detailsDone}/${p.detailsTotal}`);
+        if (p.phase === 'ai' || allDetailsDone) parts.push(`AI解读 ${p.aiDone}/${p.aiTotal}`);
+        textEl.textContent = parts.join(' | ');
+
+        const barEl = document.getElementById('prefetch-bar');
+        if (barEl) {
+            const total = p.detailsTotal + p.aiTotal;
+            const done = p.detailsDone + p.aiDone;
+            barEl.style.width = (total > 0 ? Math.round(done / total * 100) : 0) + '%';
+        }
     },
 };
