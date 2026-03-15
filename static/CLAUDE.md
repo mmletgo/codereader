@@ -13,6 +13,7 @@
 - `js/paths.js` — AI阅读路径管理页（路径列表/详情双面板切换、创建路径、查看详情、激活跳转浏览器、删除路径、PC端双面板并排布局感知）
 - `js/graph.js` — D3.js横向树状图（buildTree处理循环引用和多根节点、d3.zoom缩放平移、节点点击跳转）
 - `js/ai.js` — AI辅助分析模块（函数解读面板展开/折叠、行级代码解释、AI自动备注生成、简单Markdown渲染、前端缓存+防重复请求）
+- `js/prefetch.js` — 后台预加载模块（进入浏览页后自动在后台缓存所有函数详情和AI解读，Phase1并发3加载函数详情+预渲染HTML，Phase2并发1加载AI解读，带进度条UI、页面不可见时暂停、并发控制器）
 - `js/notes.js` — 备注面板（可折叠、增删、类型badge颜色、同步更新Browse缓存、AI备注显示AI标识）
 - `js/list.js` — 函数列表页（按文件分组、搜索debounce 300ms、点击跳转浏览器）
 - `js/chat.js` — AI对话模块（对话界面打开/关闭、消息渲染、发送/重置、打字指示器、预设问题、自动滚动、visualViewport虚拟键盘适配、离线时禁用发送）
@@ -29,7 +30,7 @@
 ## 前端架构
 纯HTML/CSS/JS单页应用，hash路由，无构建步骤。
 - 6个视图section通过display:flex/none切换，App.route()根据location.hash分发
-- 全局对象：API、Browse、Notes、AI、Graph、List、Export、Paths、App、CacheDB、Offline、CacheManager
+- 全局对象：API、Browse、Notes、AI、Prefetch、Graph、List、Export、Paths、App、CacheDB、Offline、CacheManager
 - 模块间通信：Notes直接访问Browse.currentDetail和Browse.cache更新备注数据
 - 离线架构：CacheDB(IndexedDB封装) → API(离线感知读写+服务器可达性检测) → Offline(队列+同步+isServerAvailable综合判断) → CacheManager(批量下载)，Service Worker独立处理静态资源缓存
 - 服务器可达性：API模块维护_serverReachable状态，区分"设备离线"和"设备在线但服务器不可达"两种场景。首次请求失败后标记服务器不可达，后续请求直接读缓存（30秒重试间隔）。启动时3秒超时快速探测。其他模块通过Offline.isServerAvailable统一判断
@@ -56,7 +57,7 @@
 ## 移动端交互设计
 - 函数浏览：底部导航栏左右箭头按钮切换函数，上下滚动查看代码
 - 函数默认按调用关系排序（后端sort_order字段），进入时一次性加载全部函数基本信息
-- 性能优化：init()三个API并行加载、_enhanceHighlight单次遍历HTML、骨架屏占位、requestIdleCallback调度预加载、_buildCodeHtml去重复用
+- 性能优化：init()三个API并行加载、_enhanceHighlight单次遍历HTML、骨架屏占位、requestIdleCallback调度预加载、_buildCodeHtml去重复用、Prefetch后台全量预加载（函数详情+AI解读）
 - 代码区域：highlight.js语法高亮，每行用`<span class="line" data-line="N">`包裹实现行号
 - 备注面板：页面底部，点击"备注(N)"切换展开/折叠，展开时代码区自动缩小
 - 调用关系图：D3.js横向树（左到右），支持双指缩放和拖拽，节点颜色区分状态（当前函数蓝色高亮、已读绿色、未读灰色、有备注红色边框），节点可点击跳转
@@ -82,6 +83,7 @@
 - PUT /api/v1/functions/{id}/read — 标记函数已读
 - PUT /api/v1/functions/reset-read?project_id=X — 重置项目所有函数已读状态
 - GET /api/v1/ai/explanation?function_id=X — 获取函数AI解读（带缓存）
+- GET /api/v1/ai/explanation-status?project_id=X — 查询项目中已有AI解读缓存的函数ID列表
 - POST /api/v1/ai/line-explain — 行级代码解释(body: {function_id, line_number, line_content})
 - POST /api/v1/ai/auto-notes — 生成AI自动备注(body: {function_id, project_id})
 - GET /api/v1/progress/?project_id=X — 获取阅读进度（返回last_function_id）

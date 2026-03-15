@@ -152,6 +152,19 @@ def get_or_generate_explanation(
     )
 
 
+def get_cached_explanation_ids(conn: sqlite3.Connection, project_id: int) -> list[int]:
+    """查询项目中已有有效AI解读缓存的函数ID列表"""
+    rows = fetch_all(conn, """
+        SELECT ae.function_id
+        FROM ai_explanations ae
+        JOIN functions f ON ae.function_id = f.id
+        WHERE f.project_id = ?
+    """, (project_id,))
+    # 注意：这里不做 hash 比对，因为缓存失效时调用 getExplanation 会自动重新生成
+    # 目的只是让前端知道哪些函数可能已经有缓存，避免不必要的 API 调用
+    return [row["function_id"] for row in rows]
+
+
 def generate_line_explanation(
     conn: sqlite3.Connection,
     function_id: int,

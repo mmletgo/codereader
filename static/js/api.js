@@ -662,6 +662,11 @@ const API = {
         return this.request(`/ai/explanation?function_id=${functionId}`);
     },
 
+    /** 查询项目中已有AI解读缓存的函数ID列表 */
+    async getAIExplanationStatus(projectId) {
+        return this.request(`/ai/explanation-status?project_id=${projectId}`);
+    },
+
     /** 行级代码解释 */
     async getAILineExplain(functionId, lineNumber, lineContent) {
         return this.request('/ai/line-explain', {

@@ -193,6 +193,10 @@ class AIExplanationResponse(BaseModel):
     cached: bool = False
 
 
+class AIExplanationStatusResponse(BaseModel):
+    cached_function_ids: list[int]
+
+
 class AILineExplainRequest(BaseModel):
     function_id: int
     line_number: int

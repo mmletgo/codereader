@@ -36,6 +36,9 @@ const Browse = {
      * @param {number|null} pathId - 可选，激活阅读路径
      */
     async init(projectId, funcId, pathId) {
+        // 停止之前的预加载
+        if (typeof Prefetch !== 'undefined') Prefetch.stop();
+
         this.projectId = projectId;
         this.cache.clear();
         this.htmlCache.clear();
@@ -67,6 +70,10 @@ const Browse = {
                 const idx = this.filteredFunctions.findIndex(f => f.id === funcId);
                 if (idx >= 0) await this.showFunction(idx);
             }
+            // 启动后台预加载
+            if (typeof Prefetch !== 'undefined') {
+                setTimeout(() => Prefetch.start(this.projectId, this.functions), 500);
+            }
             return;
         }
 
@@ -94,6 +101,11 @@ const Browse = {
             await this.showFunction(0);
         } else {
             this._renderEmpty();
+        }
+
+        // 启动后台预加载所有函数
+        if (typeof Prefetch !== 'undefined') {
+            setTimeout(() => Prefetch.start(this.projectId, this.functions), 500);
         }
     },
 

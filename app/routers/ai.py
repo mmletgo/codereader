@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.database import get_db
 from app.models import (
     AIExplanationResponse,
+    AIExplanationStatusResponse,
     AILineExplainRequest,
     AILineExplainResponse,
     AIAutoNotesRequest,
@@ -14,6 +15,7 @@ from app.models import (
 )
 from app.services.ai_service import (
     get_or_generate_explanation,
+    get_cached_explanation_ids,
     generate_line_explanation,
     generate_auto_notes,
     get_chat_history,
@@ -36,6 +38,16 @@ def get_explanation(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI分析失败: {str(e)}")
+
+
+@router.get("/explanation-status", response_model=AIExplanationStatusResponse)
+def get_explanation_status(
+    project_id: int = Query(..., description="项目ID"),
+) -> AIExplanationStatusResponse:
+    """批量查询项目中已有有效AI解读缓存的函数ID"""
+    with get_db() as conn:
+        cached_ids = get_cached_explanation_ids(conn, project_id)
+        return AIExplanationStatusResponse(cached_function_ids=cached_ids)
 
 
 @router.post("/line-explain", response_model=AILineExplainResponse)

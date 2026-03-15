@@ -269,3 +269,34 @@
 .ai-line-error {
     color: var(--accent-danger);
 }
+
+/* ========== Prefetch Progress Indicator ========== */
+.prefetch-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: var(--bg-tertiary);
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.prefetch-bar-track {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 60px;
+    max-width: 120px;
+}
+.prefetch-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+.prefetch-text {
+    white-space: nowrap;
+}
