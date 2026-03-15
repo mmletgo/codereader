@@ -56,6 +56,8 @@ class MainActivity : AppCompatActivity() {
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             allowFileAccess = false
             setSupportZoom(false)
+            builtInZoomControls = false
+            displayZoomControls = false
         }
 
         webView.webViewClient = object : WebViewClient() {

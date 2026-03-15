@@ -194,42 +194,57 @@ api_key = "your-api-key"
 model = "claude-sonnet-4-20250514" # 按服务商支持的模型名填写
 ```
 
-### 3. 启动
+### 3. 启动服务端
 
 ```bash
 python main.py
 ```
 
 - 本机访问：`http://localhost:8080`
-- 手机访问：`http://{局域网IP}:8080`（确保手机和电脑在同一网络）
+- 局域网访问：`http://{局域网IP}:8080`
 
-### 4. 手机安装（二选一）
+### 4. 网络连接（服务端 ↔ 手机）
 
-#### 方式 A：Android APK（推荐）
+CodeReader 采用 C/S 架构：服务端运行在 PC 上分析代码，手机作为客户端浏览。推荐使用 [Tailscale](https://tailscale.com/) 建立虚拟局域网，无需处理 NAT、防火墙和端口转发：
 
-从 [Releases](https://github.com/mmletgo/codereader/releases) 下载 APK 安装到手机，首次启动输入服务器地址（如 `http://192.168.1.100:8080`）即可使用。
+```bash
+# 在服务端（PC）安装并登录 Tailscale
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
 
-- 静态文件打包在 APK 内，无需 HTTPS
+# 手机端也安装 Tailscale 并登录同一账号
+# 完成后双方自动组网，通过 Tailscale IP 互访
+```
+
+手机 APP 中填写服务端的 Tailscale IP（如 `http://100.x.x.x:8080`）即可。在家、在外、切换 Wi-Fi 都能稳定连接。
+
+> 如果手机和 PC 在同一 Wi-Fi 下，也可以直接使用局域网 IP（如 `http://192.168.1.100:8080`），无需 Tailscale。
+
+### 5. 手机安装
+
+#### Android APK（推荐）
+
+从 [Releases](https://github.com/mmletgo/codereader/releases) 下载 APK 安装到手机，首次启动输入服务器地址即可使用。
+
+- 静态文件打包在 APK 内，启动即用
 - 支持离线浏览已缓存的项目数据（IndexedDB）
 - 项目列表页齿轮按钮可随时修改服务器地址
 
 > 也可自行构建 APK，见 [构建 Android APK](#构建-android-apk)。
 
-#### 方式 B：PWA 安装（iOS / 浏览器）
+#### PWA 安装（iOS / 浏览器备用）
 
-需要 HTTPS（Service Worker 要求），通过 [Tailscale](https://tailscale.com/) 提供证书：
+PWA 离线启动需要 HTTPS。通过 Tailscale 一键开启：
 
 ```bash
-sudo tailscale serve --bg 8080
+sudo tailscale serve --bg 8080    # 自动签发证书
 ```
 
 手机通过 `https://{机器名}.{tailnet}.ts.net/` 访问，然后：
 - Android Chrome：菜单(⋮) → 添加到主屏幕
 - iOS Safari：分享按钮(⬆) → 添加到主屏幕
 
-> 不需要离线功能？跳过此步，通过 HTTP 直接访问即可使用所有在线功能。
-
-### 5. 使用流程
+### 6. 使用流程
 
 1. 在首页点击 `+` 按钮，输入 Python 项目的目录路径，创建并扫描项目
 2. 点击项目卡片进入函数浏览器，左右切换函数阅读代码
