@@ -497,6 +497,29 @@ const App = {
             }
         }
 
+        // 下载 index.html，提取 body HTML（不含 loader script）存入 IndexedDB
+        try {
+            const resp = await fetch(serverBase + '/index.html', { cache: 'no-store' });
+            if (resp.ok) {
+                const html = await resp.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                // 移除 body 中所有 script 标签（loader 等），只保留 DOM 结构
+                doc.body.querySelectorAll('script').forEach(s => s.remove());
+                const bodyHtml = doc.body.innerHTML.trim();
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction('files', 'readwrite');
+                    const req = tx.objectStore('files').put(bodyHtml, '_html_body');
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => reject(req.error);
+                });
+                downloadCount++;
+                console.info('[HotUpdate] index.html body 已更新');
+            }
+        } catch (e) {
+            console.warn('[HotUpdate] 下载 index.html 失败:', e);
+        }
+
         db.close();
 
         if (downloadCount > 0) {

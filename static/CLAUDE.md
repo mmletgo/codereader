@@ -1,13 +1,13 @@
 # static/ - 前端静态文件
 
 ## 文件结构
-- `index.html` — SPA入口，定义6个section视图容器和新建项目对话框，底部内联动态加载器脚本（支持Android热更新：检查IndexedDB热更新文件优先使用，否则从bundle加载，加载完成后调用App.init()）
+- `index.html` — SPA入口，定义6个section视图容器和新建项目对话框，底部内联动态加载器脚本（支持Android热更新：先替换热更新的HTML body结构，再检查IndexedDB热更新JS/CSS文件优先使用，否则从bundle加载，加载完成后调用App.init()）
 - `css/main.css` — 主样式（暗色主题变量、flex布局、触控44px最小高度、响应式组件）
 - `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖、行级调用按钮和展开区样式、骨架屏shimmer动画）
 - `css/chat.css` — AI对话界面样式（覆盖层/侧面板、消息气泡、打字动画、输入区、Markdown渲染、导航按钮指示器）
 - `css/graph.css` — D3调用关系图节点/连线/缩放样式
 - `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar、阅读路径页双面板并排布局；≥1440px断点：更宽侧边栏、更大字体）
-- `js/app.js` — 应用入口，hash路由管理（6条路由规则），项目列表页渲染和创建/删除逻辑，离线缓存系统初始化（CacheDB/Offline/SW），PWA安装引导，项目卡片缓存状态渲染与下载/删除操作，Android热更新检查（_checkHotUpdate：比较服务器/localStorage/APK版本，不一致则下载JS/CSS到IndexedDB并reload）
+- `js/app.js` — 应用入口，hash路由管理（6条路由规则），项目列表页渲染和创建/删除逻辑，离线缓存系统初始化（CacheDB/Offline/SW），PWA安装引导，项目卡片缓存状态渲染与下载/删除操作，Android热更新检查（_checkHotUpdate：比较服务器/localStorage/APK版本，不一致则下载JS/CSS/HTML到IndexedDB并reload）
 - `js/api.js` — API请求封装（统一fetch wrapper带离线感知：GET请求在线缓存+离线回退IndexedDB，写操作离线入队列+本地更新+模拟响应，_pathToStore路径到IndexedDB store映射）
 - `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、多语言代码高亮渲染（Python/JS/TS动态切换）、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载、PC端侧边栏函数列表渲染与搜索、阅读路径模式激活/退出/进度跟踪，init()支持pathId参数通过URL传递路径状态）
 - `js/paths.js` — AI阅读路径管理页（路径列表/详情双面板切换、创建路径、查看详情、激活跳转浏览器、删除路径、PC端双面板并排布局感知）

@@ -318,6 +318,22 @@
             }
         }
         if (hasHotUpdates) {
+            // 应用热更新的 HTML body（index.html 结构变更）
+            var hotHtml = await getHotFile('_html_body');
+            if (hotHtml) {
+                var bodyChildren = document.body.children;
+                for (var k = bodyChildren.length - 1; k >= 0; k--) {
+                    if (bodyChildren[k].tagName !== 'SCRIPT') {
+                        bodyChildren[k].remove();
+                    }
+                }
+                var temp = document.createElement('div');
+                temp.innerHTML = hotHtml;
+                var firstScript = document.body.querySelector('script');
+                while (temp.firstChild) {
+                    document.body.insertBefore(temp.firstChild, firstScript);
+                }
+            }
             var cssFiles = ['css/main.css', 'css/code.css', 'css/graph.css', 'css/responsive.css', 'css/chat.css', 'css/offline.css'];
             for (var i = 0; i < cssFiles.length; i++) {
                 var content = await getHotFile(cssFiles[i]);

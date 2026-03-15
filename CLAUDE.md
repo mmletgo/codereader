@@ -81,4 +81,4 @@ JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleDebug  # 构建AP
 - AI配置：config.toml的[ai]段配置base_url/api_key/model，支持自定义代理网关
 - 配置管理：config.toml（实际配置，gitignored）+ config.example.toml（模板，git跟踪）
 - Android封装：前端静态文件打包进APK通过WebViewAssetLoader以HTTPS加载，API通过JS Bridge获取用户配置的服务器地址，CORS中间件允许`appassets.androidplatform.net`跨域，WebView中跳过SW/PWA注册
-- Android热更新：服务器启动时计算静态文件哈希(`/api/v1/static-version/`)，`sync_assets.sh`打包时用同算法写入APK的`version.json`，APP启动时比较版本→不一致则从服务器下载JS/CSS到IndexedDB(`codereader-hotupdate`)→`index.html`动态加载器优先使用热更新文件→下次启动即生效
+- Android热更新：服务器启动时计算静态文件哈希(`/api/v1/static-version/`)，`sync_assets.sh`打包时用同算法写入APK的`version.json`，APP启动时比较版本→不一致则从服务器下载JS/CSS/HTML到IndexedDB(`codereader-hotupdate`)→`index.html`动态加载器优先使用热更新文件（含HTML body结构替换）→下次启动即生效
