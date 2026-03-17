@@ -17,6 +17,7 @@ const _LANG_KEYWORDS = {
 const Browse = {
     projectId: null,
     projectName: '',
+    projectScanTime: null,  // 服务端项目扫描时间，用于缓存过期检测
     functions: [],         // [{id, name, qualified_name, ...}] 排好序的函数列表
     filteredFunctions: [], // 筛选后的函数列表（如"只看有备注的"）
     currentIndex: 0,       // 当前在filteredFunctions中的索引
@@ -71,7 +72,7 @@ const Browse = {
                 if (idx >= 0) await this.showFunction(idx);
             }
             // 启动后台预加载
-            setTimeout(() => CacheManager.startBrowsePrefetch(this.projectId, this.functions), 500);
+            setTimeout(() => CacheManager.startBrowsePrefetch(this.projectId, this.functions, this.projectScanTime), 500);
             return;
         }
 
@@ -102,7 +103,7 @@ const Browse = {
         }
 
         // 启动后台预加载所有函数
-        setTimeout(() => CacheManager.startBrowsePrefetch(this.projectId, this.functions), 500);
+        setTimeout(() => CacheManager.startBrowsePrefetch(this.projectId, this.functions, this.projectScanTime), 500);
     },
 
     /** 加载项目信息 */
@@ -112,6 +113,7 @@ const Browse = {
             const proj = projects.find(p => p.id === this.projectId);
             if (proj) {
                 this.projectName = proj.name;
+                this.projectScanTime = proj.scan_time || null;
                 document.getElementById('browse-project-name').textContent = proj.name;
             }
         } catch (_) {

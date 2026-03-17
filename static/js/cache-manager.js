@@ -347,8 +347,9 @@ const CacheManager = {
      * 启动浏览页后台预加载
      * @param {number} projectId
      * @param {Array<{id: number}>} functions - 函数列表
+     * @param {string|null} [serverScanTime] - 服务端项目扫描时间，用于检测缓存是否过期
      */
-    async startBrowsePrefetch(projectId, functions) {
+    async startBrowsePrefetch(projectId, functions, serverScanTime) {
         this.stopBrowsePrefetch();
         if (!functions || functions.length === 0) return;
         if (typeof Offline !== 'undefined' && !Offline.isServerAvailable) return;
@@ -366,18 +367,28 @@ const CacheManager = {
         const meta = await CacheDB.getCacheMeta(projectId);
 
         if (meta && meta.status === 'complete') {
-            // 已缓存：从 IndexedDB 加载到内存，然后检查缺少的AI解读
-            this._showBrowseProgress();
-            this._updateBrowseProgress();
-            await this._loadMemoryFromDB(projectId, functions);
-            if (!this._bgAbort) {
-                await this._generateMissingAI(projectId, functions);
-            }
-            if (!this._bgAbort) {
+            // 检查缓存是否过期（项目重新扫描后 scan_time 会变化）
+            const isStale = serverScanTime && meta.serverScanTime && meta.serverScanTime !== serverScanTime;
+            if (isStale) {
+                console.info('[CacheManager] 项目已重新扫描，清除旧缓存重新下载');
+                await CacheDB.deleteProjectCache(projectId);
+                await CacheDB.deleteCacheMeta(projectId);
+                if (typeof AI !== 'undefined') AI.explanationCache.clear();
+                // 继续执行下方 "未缓存" 分支的全量下载
+            } else {
+                // 缓存有效：从 IndexedDB 加载到内存，然后检查缺少的AI解读
+                this._showBrowseProgress();
                 this._updateBrowseProgress();
-                setTimeout(() => this._hideBrowseProgress(), 3000);
+                await this._loadMemoryFromDB(projectId, functions);
+                if (!this._bgAbort) {
+                    await this._generateMissingAI(projectId, functions);
+                }
+                if (!this._bgAbort) {
+                    this._updateBrowseProgress();
+                    setTimeout(() => this._hideBrowseProgress(), 3000);
+                }
+                return;
             }
-            return;
         }
 
         if (this._downloadingMap.has(projectId)) {

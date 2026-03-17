@@ -18,7 +18,7 @@
 - `js/chat.js` — AI对话模块（对话界面打开/关闭、消息渲染、发送/重置、打字指示器、预设问题、自动滚动、visualViewport虚拟键盘适配、离线时禁用发送）
 - `js/cache-db.js` — IndexedDB封装层（数据库codereader-cache，10个对象存储，通用CRUD、offlineOps队列、cacheMeta管理、按projectId索引批量删除）
 - `js/offline.js` — 离线管理模块（网络状态监听online/offline事件、离线操作队列入队、操作合并去重、同步引擎回放pending操作、同步结果Toast提示、离线状态指示器UI）
-- `js/cache-manager.js` — 缓存下载管理器+后台预加载（downloadProject并发下载项目全部数据到IndexedDB、deleteProjectCache清理、getCacheStatus/getCacheInfo状态查询、_runWithConcurrency并发控制器、startBrowsePrefetch/stopBrowsePrefetch浏览页后台预加载：已缓存项目从IndexedDB加载到内存+检查缺少的AI解读、未缓存项目全量下载函数详情+AI解读+附加数据到IndexedDB并同时填充内存缓存Browse.cache/htmlCache和AI.explanationCache、进度条UI）
+- `js/cache-manager.js` — 缓存下载管理器+后台预加载（downloadProject并发下载项目全部数据到IndexedDB、deleteProjectCache清理、getCacheStatus/getCacheInfo状态查询、_runWithConcurrency并发控制器、startBrowsePrefetch/stopBrowsePrefetch浏览页后台预加载：已缓存项目从IndexedDB加载到内存+检查缺少的AI解读、未缓存项目全量下载函数详情+AI解读+附加数据到IndexedDB并同时填充内存缓存Browse.cache/htmlCache和AI.explanationCache、缓存过期自动检测（比较serverScanTime，项目重新扫描后自动清除旧缓存并重新下载）、进度条UI）
 - `js/export.js` — 导出页面（JSON/Markdown格式切换、预览缓存、Blob下载）
 - `css/offline.css` — 离线/PWA样式（PWA安装引导条、离线状态指示器、缓存进度条、缓存操作按钮、备注未同步标识、离线禁用态、同步Toast动画）
 - `sw.js` — Service Worker（静态资源预缓存、Cache-First策略、API请求放行、离线导航回退SPA入口）
