@@ -182,18 +182,24 @@ const Browse = {
         const fileInfo = `\u{1F4C4} ${func.file_path}:${func.start_line}-${func.end_line}`;
         document.getElementById('func-file-info').textContent = fileInfo;
 
-        // 先尝试缓存
+        // 先尝试内存缓存 → IndexedDB缓存 → 服务器请求
         let detail = this.cache.get(func.id);
         if (!detail) {
-            // 缓存未命中，显示骨架屏
-            this._showSkeleton();
-            try {
-                detail = await API.getFunctionDetail(func.id);
-                this.cache.set(func.id, detail);
-            } catch (err) {
-                document.getElementById('code-block').textContent = '加载失败: ' + err.message;
-                return;
+            // 内存未命中，尝试 IndexedDB
+            if (typeof CacheDB !== 'undefined' && CacheDB._db) {
+                try { detail = await CacheDB.get('functionDetails', func.id); } catch (_) {}
             }
+            if (!detail) {
+                // IndexedDB也没有，显示骨架屏并从服务器获取
+                this._showSkeleton();
+                try {
+                    detail = await API.getFunctionDetail(func.id);
+                } catch (err) {
+                    document.getElementById('code-block').textContent = '加载失败: ' + err.message;
+                    return;
+                }
+            }
+            this.cache.set(func.id, detail);
         }
 
         this.currentDetail = detail;
@@ -387,7 +393,13 @@ const Browse = {
     async _preloadOne(func) {
         let detail = this.cache.get(func.id);
         if (!detail) {
-            detail = await API.getFunctionDetail(func.id);
+            // 先尝试 IndexedDB 缓存
+            if (typeof CacheDB !== 'undefined' && CacheDB._db) {
+                try { detail = await CacheDB.get('functionDetails', func.id); } catch (_) {}
+            }
+            if (!detail) {
+                detail = await API.getFunctionDetail(func.id);
+            }
             this.cache.set(func.id, detail);
         }
         if (!this.htmlCache.has(func.id)) {
