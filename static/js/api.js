@@ -315,7 +315,25 @@ const API = {
                 if (items.length > 0 && route.indexValue) {
                     items.forEach(item => { item.projectId = route.indexValue; });
                 }
-                await CacheDB.putMany(route.store, items);
+                // readingPaths 列表项与详情共用同一个 store，
+                // 列表项没有 functions 字段，直接 put 会覆盖已缓存的详情数据，
+                // 需要合并以保留 functions 等详情字段
+                if (route.store === 'readingPaths') {
+                    for (const item of items) {
+                        try {
+                            const existing = await CacheDB.get(route.store, item.id);
+                            if (existing && existing.functions) {
+                                await CacheDB.put(route.store, { ...existing, ...item });
+                            } else {
+                                await CacheDB.put(route.store, item);
+                            }
+                        } catch (_) {
+                            await CacheDB.put(route.store, item);
+                        }
+                    }
+                } else {
+                    await CacheDB.putMany(route.store, items);
+                }
             } else if (route.type === 'all') {
                 if (Array.isArray(data)) {
                     await CacheDB.putMany(route.store, data);

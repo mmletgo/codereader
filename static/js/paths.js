@@ -151,17 +151,18 @@ const Paths = {
 
         try {
             const detail = await API.getReadingPathDetail(pathId);
+            const functions = detail.functions || [];
 
             // 渲染元信息
             metaEl.innerHTML = `
                 <div class="paths-detail-name">${this._escapeHtml(detail.name)}</div>
                 <div class="paths-detail-desc">${this._escapeHtml(detail.description)}</div>
-                <div class="paths-detail-info">${detail.functions.length} 个函数 · ${detail.created_at}</div>
+                <div class="paths-detail-info">${functions.length} 个函数 · ${detail.created_at || ''}</div>
             `;
 
             // 渲染函数列表
             let funcsHtml = '';
-            detail.functions.forEach((f, idx) => {
+            functions.forEach((f, idx) => {
                 const isAvailable = f.function_id != null;
                 const shortName = f.qualified_name.includes('.')
                     ? f.qualified_name.split('.').slice(-2).join('.')
