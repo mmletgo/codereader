@@ -10,6 +10,7 @@ from app.services.project_service import (
     delete_project,
     delete_scan_data_and_preserve_notes,
     rebind_notes,
+    rebind_ai_explanations,
     restore_read_status,
 )
 from analyzer.engine import analyze_project
@@ -72,8 +73,8 @@ def rescan_project(project_id: int) -> ProjectResponse:
         root_path: str = project_row["root_path"]
         project_name: str = project_row["name"]
 
-        # 删除旧的扫描数据，保留notes和已读状态
-        saved_notes, old_read_status = delete_scan_data_and_preserve_notes(conn, project_id)
+        # 删除旧的扫描数据，保留notes、已读状态和AI解读缓存
+        saved_notes, old_read_status, saved_ai = delete_scan_data_and_preserve_notes(conn, project_id)
 
     # 重新扫描，复用已有project_id
     analyze_project(
@@ -82,9 +83,10 @@ def rescan_project(project_id: int) -> ProjectResponse:
         existing_project_id=project_id,
     )
 
-    # 重新绑定notes和已读状态
+    # 重新绑定notes、已读状态和AI解读缓存
     with get_db() as conn:
         rebind_notes(conn, project_id, saved_notes)
+        rebind_ai_explanations(conn, project_id, saved_ai)
         restore_read_status(conn, project_id, old_read_status)
 
         project = get_project_by_id(conn, project_id)

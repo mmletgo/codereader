@@ -15,8 +15,10 @@
 ## 关键逻辑
 
 ### project_service.py
-- `delete_scan_data_and_preserve_notes()` — 重新扫描前保存notes映射和已读状态，然后删除files/functions/call_relations，返回 (saved_notes, old_read_status)
+- `delete_scan_data_and_preserve_notes()` — 重新扫描前保存notes映射、已读状态和AI解读缓存，然后删除files/functions/call_relations，返回 (saved_notes, old_read_status, saved_ai_explanations)
 - `rebind_notes()` — 重新扫描后通过qualified_name查找新function_id，重新插入notes
+- `get_ai_explanations_for_rebind()` — 获取项目AI解读缓存及其qualified_name，用于重新扫描后重新绑定
+- `rebind_ai_explanations()` — 重新扫描后通过qualified_name+func_body_hash比对，仅恢复代码未变的AI解读缓存，变了的跳过等待按需重新生成
 - `get_read_status_for_rebind()` — 获取项目函数的已读状态和代码体，返回 {qualified_name: (is_read, body)}
 - `restore_read_status()` — 重新扫描后，对qualified_name和body均未变的函数恢复is_read=1
 

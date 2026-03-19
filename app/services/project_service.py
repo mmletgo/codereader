@@ -1,4 +1,5 @@
 """项目管理服务 — 创建、查询、删除、重新扫描"""
+import hashlib
 import sqlite3
 from datetime import datetime
 
@@ -93,29 +94,73 @@ def restore_read_status(
                 execute(conn, "UPDATE functions SET is_read = 1 WHERE id = ?", (func["id"],))
 
 
+def get_ai_explanations_for_rebind(
+    conn: sqlite3.Connection, project_id: int
+) -> list[dict]:
+    """获取项目的AI解读缓存及其对应函数的qualified_name，用于重新扫描后重新绑定"""
+    rows = fetch_all(
+        conn,
+        """
+        SELECT ae.explanation, ae.func_body_hash, f.qualified_name
+        FROM ai_explanations ae
+        JOIN functions f ON ae.function_id = f.id
+        WHERE f.project_id = ?
+        """,
+        (project_id,),
+    )
+    return rows
+
+
+def rebind_ai_explanations(
+    conn: sqlite3.Connection,
+    project_id: int,
+    saved_explanations: list[dict],
+) -> None:
+    """重新扫描后，通过qualified_name将AI解读缓存绑定到新的function_id。
+
+    只恢复函数体未变（hash匹配）的缓存，变了的跳过等待按需重新生成。
+    """
+    for item in saved_explanations:
+        qname: str = item["qualified_name"]
+        func_row = fetch_one(
+            conn,
+            "SELECT id, body FROM functions WHERE project_id = ? AND qualified_name = ?",
+            (project_id, qname),
+        )
+        if func_row is None:
+            continue
+        # 比较函数体哈希，一致才恢复
+        new_hash = hashlib.sha256(func_row["body"].encode("utf-8")).hexdigest()
+        if new_hash == item["func_body_hash"]:
+            conn.execute(
+                "INSERT INTO ai_explanations (function_id, explanation, func_body_hash) VALUES (?, ?, ?)",
+                (func_row["id"], item["explanation"], item["func_body_hash"]),
+            )
+
+
 def delete_scan_data_and_preserve_notes(
     conn: sqlite3.Connection, project_id: int
-) -> tuple[list[dict], dict[str, tuple[bool, str]]]:
-    """删除扫描数据并保留notes信息和已读状态用于后续重新绑定
+) -> tuple[list[dict], dict[str, tuple[bool, str]], list[dict]]:
+    """删除扫描数据并保留notes、已读状态、AI解读缓存用于后续重新绑定
 
     Returns:
-        (saved_notes, old_read_status)
+        (saved_notes, old_read_status, saved_ai_explanations)
     """
     # 先获取notes和对应的qualified_name
     saved_notes = get_notes_for_rebind(conn, project_id)
     # 获取已读状态
     old_read_status = get_read_status_for_rebind(conn, project_id)
+    # 获取AI解读缓存
+    saved_ai_explanations = get_ai_explanations_for_rebind(conn, project_id)
 
     # 删除call_relations
     execute(conn, "DELETE FROM call_relations WHERE project_id = ?", (project_id,))
-    # 删除notes（因为functions删除时会级联删除）
-    # 但我们已保存了notes数据
-    # 删除functions（会级联删除notes）
+    # 删除functions（会级联删除notes和ai_explanations，但已保存）
     execute(conn, "DELETE FROM functions WHERE project_id = ?", (project_id,))
     # 删除files
     execute(conn, "DELETE FROM files WHERE project_id = ?", (project_id,))
 
-    return saved_notes, old_read_status
+    return saved_notes, old_read_status, saved_ai_explanations
 
 
 def rebind_notes(conn: sqlite3.Connection, project_id: int, saved_notes: list[dict]) -> None:
