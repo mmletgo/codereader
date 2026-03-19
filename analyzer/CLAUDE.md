@@ -37,6 +37,8 @@
   - `qualified_name_map`: `{file_rel_path::qualified_name -> FunctionInfo}` 精确定位
   - `name_map`: `{函数名/qualified_name -> [FunctionInfo列表]}` 全局搜索
   - `file_func_map`: `{文件相对路径 -> [FunctionInfo列表]}` 文件级搜索
+- `_resolve_single` 返回 `list[str]`（空=无法解析，单=唯一匹配，多=候选列表），`resolve()` 将多候选展开为多个 `(call, qname)` 元组（返回类型不变）
+- 支持多级属性方法调用解析（如 `self.strategy._cancel_all()`）：提取最终方法名后按正常优先级匹配，多候选时返回全部
 - 解析优先级: self/cls/this方法 → 同文件直接调用 → import解析 → 全局同名 → 属性调用qualified_name匹配 → import模块解析 → 全局属性名
 - 模块路径转文件路径:
   - Python: `a.b.c` -> `["a/b/c.py", "a/b/c/__init__.py"]`

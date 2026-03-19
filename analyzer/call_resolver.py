@@ -46,10 +46,14 @@ class CallResolver:
 
         results: list[tuple[CallInfo, str | None]] = []
         for call in calls:
-            resolved: str | None = self._resolve_single(
+            resolved_list: list[str] = self._resolve_single(
                 call, file_imports, caller_file_map
             )
-            results.append((call, resolved))
+            if not resolved_list:
+                results.append((call, None))
+            else:
+                for qname in resolved_list:
+                    results.append((call, qname))
         return results
 
     def _find_caller_file(
@@ -68,8 +72,8 @@ class CallResolver:
         call: CallInfo,
         file_imports: dict[str, list[ImportInfo]],
         caller_file_map: dict[str, str],
-    ) -> str | None:
-        """按优先级解析单个调用。"""
+    ) -> list[str]:
+        """按优先级解析单个调用。返回匹配的qualified_name列表（空=无法解析，单=唯一，多=候选）。"""
         callee_name: str = call.callee_name
         caller_qname: str = call.caller_qualified_name
         caller_file: str | None = self._find_caller_file(
@@ -79,34 +83,35 @@ class CallResolver:
         # 1. self.method / cls.method / this.method → 从 caller 的 class 中查找同类方法
         if callee_name.startswith(("self.", "cls.", "this.")):
             method_name: str = callee_name.split(".", 1)[1]
-            # 跳过多级属性访问（如 self.logger.warning）
-            if "." in method_name:
-                return None
+            # 提取最终方法名（支持多级属性: self.strategy._cancel_all → _cancel_all）
+            final_method: str = method_name.rsplit(".", 1)[-1]
             # 从 caller_qname 推断类名: "ClassName.method_name" -> "ClassName"
             if "." in caller_qname:
                 caller_class: str = caller_qname.split(".")[0]
-                target_qname: str = f"{caller_class}.{method_name}"
+                target_qname: str = f"{caller_class}.{final_method}"
                 # 在同文件中查找本类方法
                 if caller_file is not None:
                     key: str = f"{caller_file}::{target_qname}"
                     if key in self.qualified_name_map:
-                        return target_qname
+                        return [target_qname]
                 # 回退到全局搜索同名 qualified_name
                 if target_qname in self.name_map:
-                    return target_qname
+                    return [target_qname]
                 # 继承回退：在同文件中搜索任意类的同名方法（父类/Mixin）
                 if caller_file is not None:
                     for func in self.file_func_map.get(caller_file, []):
-                        if func.name == method_name and func.is_method:
-                            return func.qualified_name
-                # 全局搜索同名方法（唯一匹配时采用）
+                        if func.name == final_method and func.is_method:
+                            return [func.qualified_name]
+                # 全局搜索同名方法（唯一匹配时采用，多候选返回全部）
                 candidates: list[FunctionInfo] = [
-                    f for f in self.name_map.get(method_name, [])
+                    f for f in self.name_map.get(final_method, [])
                     if f.is_method
                 ]
                 if len(candidates) == 1:
-                    return candidates[0].qualified_name
-            return None
+                    return [candidates[0].qualified_name]
+                elif len(candidates) > 1:
+                    return [c.qualified_name for c in candidates]
+            return []
 
         # 2. 直接调用 func() — 无点号
         if "." not in callee_name:
@@ -114,21 +119,21 @@ class CallResolver:
             if caller_file is not None:
                 for func in self.file_func_map.get(caller_file, []):
                     if func.name == callee_name:
-                        return func.qualified_name
+                        return [func.qualified_name]
             # 2b. 通过 import 信息匹配
             resolved: str | None = self._resolve_via_import(
                 callee_name, caller_file, file_imports
             )
             if resolved is not None:
-                return resolved
+                return [resolved]
             # 2c. 全局同名函数
             candidates: list[FunctionInfo] = self.name_map.get(callee_name, [])
             if len(candidates) == 1:
-                return candidates[0].qualified_name
+                return [candidates[0].qualified_name]
             elif len(candidates) > 1:
                 # 多个同名函数，无法确定，返回第一个
-                return candidates[0].qualified_name
-            return None
+                return [candidates[0].qualified_name]
+            return []
 
         # 3. module.func() 或 obj.method() — 有点号
         parts: list[str] = callee_name.split(".")
@@ -137,7 +142,7 @@ class CallResolver:
 
         # 3a. 直接作为 qualified_name 匹配（如 ClassName.method）
         if callee_name in self.name_map:
-            return self.name_map[callee_name][0].qualified_name
+            return [self.name_map[callee_name][0].qualified_name]
 
         # 3b. 通过 import 信息解析模块路径
         if caller_file is not None:
@@ -149,14 +154,16 @@ class CallResolver:
                         imp.module, imp.name, attr_name, caller_file
                     )
                     if resolved_func is not None:
-                        return resolved_func
+                        return [resolved_func]
 
-        # 3c. 全局搜索 attr_name
+        # 3c. 全局搜索 attr_name（唯一匹配时采用，多候选返回全部）
         candidates = self.name_map.get(attr_name, [])
         if len(candidates) == 1:
-            return candidates[0].qualified_name
+            return [candidates[0].qualified_name]
+        elif len(candidates) > 1:
+            return [c.qualified_name for c in candidates]
 
-        return None
+        return []
 
     def _resolve_via_import(
         self,

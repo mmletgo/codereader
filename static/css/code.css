@@ -222,6 +222,18 @@
     font-style: italic;
 }
 
+/* ========== Multi-candidate Group Header ========== */
+.line-call-group-header {
+    display: block;
+    padding: 4px 8px 2px;
+    margin-top: 4px;
+    font-family: var(--font-code);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
 /* ========== AI Line Button ========== */
 .line-ai-btn {
     position: absolute;

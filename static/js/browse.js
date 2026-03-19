@@ -337,7 +337,9 @@ const Browse = {
             }
             const suffix = '</span>'.repeat(openTags.length);
             const callees = lineCalls[String(lineNum)];
-            const callBtn = callees ? `<button class="line-call-btn" data-line="${lineNum}" title="查看调用的函数">f(${callees.length})</button>` : '';
+            // 按 call_expression 去重计数（多候选算一个调用）
+            const callCount = callees ? new Set(callees.map(c => c.call_expression || c.qualified_name)).size : 0;
+            const callBtn = callees ? `<button class="line-call-btn" data-line="${lineNum}" title="查看调用的函数">f(${callCount})</button>` : '';
             const indentStyle = indents[i] > 0 ? ` style="--indent:${indents[i]}"` : '';
             return `<span class="line" data-line="${lineNum}"${indentStyle}>${prefix}${line}${suffix}${callBtn}<button class="line-ai-btn" data-line="${lineNum}" title="AI解释">?</button></span>`;
         });
@@ -704,15 +706,29 @@ const Browse = {
                     return;
                 }
 
-                // 创建展开区
+                // 创建展开区 — 按 call_expression 分组显示
                 const infoDiv = document.createElement('span');
                 infoDiv.className = 'line-call-info';
                 infoDiv.style.display = 'block';
-                const items = callees.map(c => {
-                    const ds = c.docstring ? `<span class="line-call-doc">${Browse._escapeHtml(c.docstring)}</span>` : '<span class="line-call-doc no-doc">无文档说明</span>';
-                    return `<span class="line-call-item" data-func-id="${c.id}"><span class="line-call-name">${Browse._escapeHtml(c.qualified_name)}</span><span class="line-call-file">${Browse._escapeHtml(c.file_path)}</span>${ds}</span>`;
-                }).join('');
-                infoDiv.innerHTML = items;
+                // 按 call_expression 分组
+                const groups = new Map();
+                for (const c of callees) {
+                    const key = c.call_expression || c.qualified_name;
+                    if (!groups.has(key)) groups.set(key, []);
+                    groups.get(key).push(c);
+                }
+                let html = '';
+                for (const [expr, members] of groups) {
+                    if (members.length > 1) {
+                        // 多候选：显示分组标题 + 候选列表
+                        html += `<span class="line-call-group-header">${Browse._escapeHtml(expr)} — ${members.length} 个候选</span>`;
+                    }
+                    for (const c of members) {
+                        const ds = c.docstring ? `<span class="line-call-doc">${Browse._escapeHtml(c.docstring)}</span>` : '<span class="line-call-doc no-doc">无文档说明</span>';
+                        html += `<span class="line-call-item" data-func-id="${c.id}"><span class="line-call-name">${Browse._escapeHtml(c.qualified_name)}</span><span class="line-call-file">${Browse._escapeHtml(c.file_path)}</span>${ds}</span>`;
+                    }
+                }
+                infoDiv.innerHTML = html;
                 lineEl.after(infoDiv);
                 callBtn.classList.add('active');
 

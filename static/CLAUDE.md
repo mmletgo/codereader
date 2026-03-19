@@ -3,7 +3,7 @@
 ## 文件结构
 - `index.html` — SPA入口，定义6个section视图容器和新建项目对话框，底部内联动态加载器脚本（支持Android热更新：先替换热更新的HTML body结构，再检查IndexedDB热更新JS/CSS文件优先使用，否则从bundle加载，加载完成后调用App.init()）
 - `css/main.css` — 主样式（暗色主题变量、flex布局、触控44px最小高度、响应式组件）
-- `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖、行级调用按钮和展开区样式、骨架屏shimmer动画）
+- `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖、行级调用按钮和展开区样式、多候选分组标题样式、骨架屏shimmer动画）
 - `css/chat.css` — AI对话界面样式（覆盖层/侧面板、消息气泡、打字动画、输入区、Markdown渲染、导航按钮指示器）
 - `css/graph.css` — D3调用关系图节点/连线/缩放样式
 - `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar、阅读路径页双面板并排布局、AI对话面板右侧常驻显示；≥1440px断点：更宽侧边栏、更大字体、更宽对话面板）

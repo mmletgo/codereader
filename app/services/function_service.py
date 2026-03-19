@@ -154,7 +154,8 @@ def _get_callees_and_line_calls(
     rows = fetch_all(
         conn,
         """
-        SELECT cr.call_line, f.id, f.name, f.qualified_name,
+        SELECT cr.call_line, cr.callee_name AS call_expression,
+               f.id, f.name, f.qualified_name,
                fi.rel_path AS file_path, f.docstring
         FROM call_relations cr
         JOIN functions f ON cr.callee_id = f.id
@@ -188,6 +189,7 @@ def _get_callees_and_line_calls(
             qualified_name=row["qualified_name"],
             file_path=row["file_path"],
             docstring=row["docstring"],
+            call_expression=row["call_expression"],
         ))
 
     return callees, line_calls
@@ -230,7 +232,8 @@ def _get_line_calls(conn: sqlite3.Connection, function_id: int) -> dict[str, lis
     rows = fetch_all(
         conn,
         """
-        SELECT cr.call_line, f.id, f.name, f.qualified_name,
+        SELECT cr.call_line, cr.callee_name AS call_expression,
+               f.id, f.name, f.qualified_name,
                fi.rel_path AS file_path, f.docstring
         FROM call_relations cr
         JOIN functions f ON cr.callee_id = f.id
@@ -249,6 +252,7 @@ def _get_line_calls(conn: sqlite3.Connection, function_id: int) -> dict[str, lis
             qualified_name=row["qualified_name"],
             file_path=row["file_path"],
             docstring=row["docstring"],
+            call_expression=row["call_expression"],
         )
         result.setdefault(line_key, []).append(callee)
     return result

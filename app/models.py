@@ -67,6 +67,7 @@ class CalleeOnLine(BaseModel):
     qualified_name: str
     file_path: str
     docstring: str | None = None
+    call_expression: str | None = None  # 原始调用表达式，用于前端分组多候选
 
 
 class FunctionDetail(BaseModel):

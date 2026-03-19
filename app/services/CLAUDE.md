@@ -24,8 +24,8 @@
 - 分页查询使用LEFT JOIN预聚合子查询统计note_count、caller_count、callee_count（替代关联子查询，性能更优），同时返回is_read状态
 - 详情中decorators从JSON字符串解析为list[str]
 - callers通过call_relations表的callee_id查询，callees通过caller_id查询(callee_id非NULL)
-- `_get_callees_and_line_calls()` — 合并查询callees和line_calls，一次数据库查询同时提取去重的被调用函数列表和按行分组的行级调用信息
-- `_get_line_calls()` — 独立查询函数中每行调用的项目内函数（按call_line分组），供其他场景使用
+- `_get_callees_and_line_calls()` — 合并查询callees和line_calls，一次数据库查询同时提取去重的被调用函数列表和按行分组的行级调用信息，包含call_expression（原始调用表达式）用于前端多候选分组
+- `_get_line_calls()` — 独立查询函数中每行调用的项目内函数（按call_line分组），包含call_expression，供其他场景使用
 
 ### export_service.py
 - `get_export_data()` — 通过JOIN notes表筛选有备注的函数，组装完整导出数据
