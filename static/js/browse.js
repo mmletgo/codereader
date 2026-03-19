@@ -169,8 +169,8 @@ const Browse = {
     async showFunction(index) {
         if (index < 0 || index >= this.filteredFunctions.length) return;
 
-        // 切换函数时关闭对话面板
-        if (Chat.isOpen) {
+        // 切换函数时：移动端关闭对话面板，PC端后续自动更新
+        if (Chat.isOpen && window.innerWidth < 1024) {
             Chat.close();
         }
 
@@ -231,6 +231,11 @@ const Browse = {
         this._updateNav();
         this._updateSidebarActive();
         this._debounceSaveProgress();
+
+        // PC端自动加载对话面板
+        if (window.innerWidth >= 1024) {
+            Chat.open(detail.id);
+        }
 
         // 预加载相邻函数
         this._preloadAdjacent(index);
@@ -296,6 +301,28 @@ const Browse = {
         const rawLines = highlighted.split('\n');
         let openTags = [];
         const lineCalls = detail.line_calls || {};
+
+        // Compute indent levels for indent guide lines
+        const indentSize = 4;
+        const indents = rawLines.map(line => {
+            const text = line.replace(/<[^>]*>/g, '');
+            const m = text.match(/^( +)/);
+            return m ? Math.floor(m[1].length / indentSize) : 0;
+        });
+        // Blank lines: inherit min(prev, next) non-blank indent for continuous guides
+        for (let i = 0; i < rawLines.length; i++) {
+            if (rawLines[i].replace(/<[^>]*>/g, '').trim() === '') {
+                let prev = 0, next = 0;
+                for (let p = i - 1; p >= 0; p--) {
+                    if (rawLines[p].replace(/<[^>]*>/g, '').trim() !== '') { prev = indents[p]; break; }
+                }
+                for (let n = i + 1; n < rawLines.length; n++) {
+                    if (rawLines[n].replace(/<[^>]*>/g, '').trim() !== '') { next = indents[n]; break; }
+                }
+                indents[i] = Math.min(prev, next);
+            }
+        }
+
         const wrappedLines = rawLines.map((line, i) => {
             const lineNum = startLine + i;
             const prefix = openTags.join('');
@@ -311,7 +338,8 @@ const Browse = {
             const suffix = '</span>'.repeat(openTags.length);
             const callees = lineCalls[String(lineNum)];
             const callBtn = callees ? `<button class="line-call-btn" data-line="${lineNum}" title="查看调用的函数">f(${callees.length})</button>` : '';
-            return `<span class="line" data-line="${lineNum}">${prefix}${line}${suffix}${callBtn}<button class="line-ai-btn" data-line="${lineNum}" title="AI解释">?</button></span>`;
+            const indentStyle = indents[i] > 0 ? ` style="--indent:${indents[i]}"` : '';
+            return `<span class="line" data-line="${lineNum}"${indentStyle}>${prefix}${line}${suffix}${callBtn}<button class="line-ai-btn" data-line="${lineNum}" title="AI解释">?</button></span>`;
         });
         return wrappedLines.join('\n');
     },

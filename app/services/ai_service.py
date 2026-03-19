@@ -542,7 +542,7 @@ def _call_claude_chat(
     """调用 Claude API（支持 tool use 循环）"""
     client = _get_client()
 
-    max_iterations = 5
+    max_iterations = 100
     text_parts: list[str] = []
 
     for _ in range(max_iterations):

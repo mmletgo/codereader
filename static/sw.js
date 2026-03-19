@@ -1,4 +1,4 @@
-const CACHE_NAME = 'codereader-static-v3';
+const CACHE_NAME = 'codereader-static-v4';
 
 // Install: 立即激活，不预缓存（避免安装卡住）
 self.addEventListener('install', () => self.skipWaiting());

@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="css/main.css?v=2">
     <link rel="stylesheet" href="css/code.css">
     <link rel="stylesheet" href="css/graph.css?v=2">
-    <link rel="stylesheet" href="css/responsive.css?v=3">
     <link rel="stylesheet" href="css/chat.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#282c34">
@@ -16,6 +15,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
     <link rel="stylesheet" href="css/offline.css">
+    <link rel="stylesheet" href="css/responsive.css?v=4">
 </head>
 <body>
     <!-- PWA安装引导 -->
@@ -144,22 +144,22 @@
                         <div id="notes-list" class="notes-list"></div>
                     </div>
                 </div>
-                <!-- AI对话覆盖层 -->
-                <div id="chat-overlay" class="chat-overlay" style="display:none;">
-                    <div class="chat-header">
-                        <button class="chat-back-btn" id="chat-back-btn">&larr;</button>
-                        <span class="chat-header-title">AI 对话</span>
-                        <span class="chat-header-func" id="chat-func-name"></span>
-                        <button class="chat-reset-btn" id="chat-reset-btn" title="重置对话">&#8635;</button>
-                    </div>
-                    <div class="chat-body-changed" id="chat-body-changed" style="display:none;">
-                        &#9888; 函数代码已更新，对话上下文可能不匹配
-                    </div>
-                    <div class="chat-messages" id="chat-messages"></div>
-                    <div class="chat-input-area">
-                        <textarea class="chat-textarea" id="chat-input" rows="1" placeholder="输入你的问题..."></textarea>
-                        <button class="chat-send-btn" id="chat-send-btn">&#10148;</button>
-                    </div>
+            </div>
+            <!-- AI对话覆盖层 -->
+            <div id="chat-overlay" class="chat-overlay" style="display:none;">
+                <div class="chat-header">
+                    <button class="chat-back-btn" id="chat-back-btn">&larr;</button>
+                    <span class="chat-header-title">AI 对话</span>
+                    <span class="chat-header-func" id="chat-func-name"></span>
+                    <button class="chat-reset-btn" id="chat-reset-btn" title="重置对话">&#8635;</button>
+                </div>
+                <div class="chat-body-changed" id="chat-body-changed" style="display:none;">
+                    &#9888; 函数代码已更新，对话上下文可能不匹配
+                </div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-input-area">
+                    <textarea class="chat-textarea" id="chat-input" rows="1" placeholder="输入你的问题..."></textarea>
+                    <button class="chat-send-btn" id="chat-send-btn">&#10148;</button>
                 </div>
             </div>
         </div>
@@ -334,7 +334,7 @@
                     document.body.insertBefore(temp.firstChild, firstScript);
                 }
             }
-            var cssFiles = ['css/main.css', 'css/code.css', 'css/graph.css', 'css/responsive.css', 'css/chat.css', 'css/offline.css'];
+            var cssFiles = ['css/main.css', 'css/code.css', 'css/graph.css', 'css/chat.css', 'css/offline.css', 'css/responsive.css'];
             for (var i = 0; i < cssFiles.length; i++) {
                 var content = await getHotFile(cssFiles[i]);
                 if (content) {

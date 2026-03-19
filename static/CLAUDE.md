@@ -6,7 +6,7 @@
 - `css/code.css` — 代码区域样式（行号用data-line属性+::before伪元素、highlight.js主题覆盖、行级调用按钮和展开区样式、骨架屏shimmer动画）
 - `css/chat.css` — AI对话界面样式（覆盖层/侧面板、消息气泡、打字动画、输入区、Markdown渲染、导航按钮指示器）
 - `css/graph.css` — D3调用关系图节点/连线/缩放样式
-- `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar、阅读路径页双面板并排布局；≥1440px断点：更宽侧边栏、更大字体）
+- `css/responsive.css` — PC端响应式适配样式（≥1024px断点：侧边栏函数列表、项目卡片网格布局、hover效果、更宽的scrollbar、阅读路径页双面板并排布局、AI对话面板右侧常驻显示；≥1440px断点：更宽侧边栏、更大字体、更宽对话面板）
 - `js/app.js` — 应用入口，hash路由管理（6条路由规则），项目列表页渲染和创建/删除逻辑，离线缓存系统初始化（CacheDB/Offline/SW），PWA安装引导，项目卡片缓存状态渲染与下载/删除操作，Android热更新检查（_checkHotUpdate：比较服务器/localStorage/APK版本，不一致则下载JS/CSS/HTML到IndexedDB并reload）
 - `js/api.js` — API请求封装（统一fetch wrapper带离线感知：GET请求在线缓存+离线回退IndexedDB，写操作离线入队列+本地更新+模拟响应，_pathToStore路径到IndexedDB store映射）
 - `js/browse.js` — 核心：函数浏览器（函数列表缓存、左右切换、多语言代码高亮渲染（Python/JS/TS动态切换）、筛选有备注函数、筛选未读函数、函数已读状态管理、键盘左右箭头快捷键、行级调用函数按钮与展开面板、骨架屏加载占位、requestIdleCallback预加载、PC端侧边栏函数列表渲染与搜索、阅读路径模式激活/退出/进度跟踪，init()支持pathId参数通过URL传递路径状态）
@@ -43,9 +43,9 @@
 - `#/project/{id}/export` — 导出（view-export），JSON/Markdown预览+下载
 
 ## PC端适配（responsive.css）
-- 浏览视图HTML结构：browse-layout(flex row) > browse-sidebar(aside) + browse-main
+- 浏览视图HTML结构：browse-layout(flex row) > browse-sidebar(aside) + browse-main + chat-overlay(AI对话面板)
 - 移动端：browse-layout和browse-main用display:contents透传布局，browse-sidebar用display:none隐藏
-- PC端（≥1024px）：左侧280px侧边栏显示函数列表（搜索+按文件分组+当前高亮），右侧主区域显示代码
+- PC端（≥1024px）：左侧280px侧边栏显示函数列表（搜索+按文件分组+当前高亮），中间主区域显示代码，右侧420px AI对话面板常驻显示（切换函数自动更新对话）
 - 超宽屏（≥1440px）：侧边栏扩展到320px
 - 项目列表页：PC端使用CSS Grid网格布局替代移动端的单列列表
 - hover效果：仅在PC端media query中定义，避免影响触控设备

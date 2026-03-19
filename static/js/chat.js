@@ -10,6 +10,11 @@ const Chat = {
     funcBodyChanged: false,
     _userScrolled: false,
 
+    /** 是否PC端 */
+    _isPC() {
+        return window.innerWidth >= 1024;
+    },
+
     /** 打开对话面板 */
     async open(functionId) {
         if (!functionId) return;
@@ -18,7 +23,9 @@ const Chat = {
         this._userScrolled = false;
 
         const overlay = document.getElementById('chat-overlay');
-        overlay.style.display = 'flex';
+        if (!this._isPC()) {
+            overlay.style.display = 'flex';
+        }
 
         // 显示函数名
         const func = Browse.currentDetail;
@@ -33,7 +40,9 @@ const Chat = {
     /** 关闭对话面板 */
     close() {
         this.isOpen = false;
-        document.getElementById('chat-overlay').style.display = 'none';
+        if (!this._isPC()) {
+            document.getElementById('chat-overlay').style.display = 'none';
+        }
     },
 
     /** 加载对话历史 */
@@ -300,10 +309,10 @@ const Chat = {
         window.addEventListener('online', () => { if (this.isOpen) this._updateSendState(); });
         window.addEventListener('offline', () => { if (this.isOpen) this._updateSendState(); });
 
-        // visualViewport 适配虚拟键盘
+        // visualViewport 适配虚拟键盘（仅移动端）
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
-                if (!this.isOpen) return;
+                if (!this.isOpen || this._isPC()) return;
                 const overlay = document.getElementById('chat-overlay');
                 if (overlay) {
                     overlay.style.height = window.visualViewport.height + 'px';
